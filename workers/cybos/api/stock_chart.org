@@ -1,0 +1,85 @@
+
+
+# def get_kline(symbol, interval, **kwargs):
+#     # count 가 2499 이상이라면 by_count로는 쓸 수 없음
+#     # period 로 요청시 endTime 에 맞춰서 전달
+#     # startTime, endTime 모두 입력시 startTime은 설정한 startTime 이전의 데이터도 결과에 포함됨
+#     period_count, period_unit = aktime.interval_dissect(interval)
+#     if apikey.CANDLE_COUNT in kwargs and kwargs[apikey.CANDLE_COUNT] == 0:
+#         return []
+
+#     data = []
+#     if period_unit == 'M':
+#         if apikey.CANDLE_COUNT in kwargs:
+#             return get_period_data_raw(symbol, 'M', kwargs[apikey.CANDLE_COUNT])
+#         # 월봉은 기간 적용 안됨
+#         return get_period_data_raw(symbol, 'M', 2499)
+#     elif period_unit == 'd' or period_unit == 'm':
+#         # default data when no additional options
+#         if apikey.CANDLE_COUNT not in kwargs and \
+#                 (apikey.END_TIME not in kwargs or
+#                  apikey.START_TIME not in kwargs):
+#             return get_period_data_raw(
+#                 symbol, convert_period(period_unit), 2499)
+
+#         end_time = (kwargs[apikey.END_TIME] if apikey.END_TIME in kwargs
+#                     else aktime.get_msec())
+#         end_time = aktime.msec_to_datetime(end_time, 'KRX')
+#         if apikey.START_TIME in kwargs:
+#             start_time = aktime.msec_to_datetime(
+#                 kwargs[apikey.START_TIME], 'KRX')
+#         else:
+#             if period_unit == 'm':  # 분봉 받아올 수 있는 게 최대 대략 2년치
+#                 start_time = aktime.msec_to_datetime(
+#                     aktime.get_msec(), 'KRX') - timedelta(days=360)
+#             else:
+#                 start_time = aktime.msec_to_datetime(
+#                     aktime.get_msec(), 'KRX') - timedelta(days=365 * 10)
+
+#         # 분봉 8일 기준 5일로 계산시 480 * 5 = 2400 개 데이터 예상
+#         # 일봉 365 * 5
+#         time_period = (timedelta(days=8)
+#                        if period_unit == 'm' else timedelta(365 * 5))
+        
+#         # print('start data', data)
+#         zero_count = 0
+#         while True:
+#             fetch = get_period_data_raw(
+#                 symbol,
+#                 convert_period(period_unit),
+#                 0,
+#                 yyyymmdd(end_time - time_period),
+#                 yyyymmdd(end_time)
+#             )
+#             if len(fetch) == 0:
+#                 zero_count += 1
+#                 LOGGER.info('zero count(%s) %d', symbol, zero_count)
+#                 if zero_count >= 5:
+#                     # when interval_type is 'm' and five weeks no data,
+#                     # then regard no more data
+#                     break
+#             else:
+#                 zero_count = 0
+#                 data[:0] = fetch
+#                 # print(kwargs[akross.CANDLE_COUNT], len(data))
+#                 if apikey.CANDLE_COUNT in kwargs and len(data) > kwargs[apikey.CANDLE_COUNT]:
+#                     data = data[-(kwargs[apikey.CANDLE_COUNT]):]
+#                     break
+#                 else:
+#                     if fetch[0][4] < aktime.datetime_to_msec(start_time):
+#                         # startTime에 맞게 자르지 않음(필요?)
+#                         break
+#             end_time = end_time - time_period - timedelta(days=1)
+
+#         # when period_unit is 'd' and fetch it on holiday,
+#         # sometimes duplicated day data is fetched, so remove duplication
+#         if period_unit == 'd' and len(data) > 1:
+#             filtered = []
+#             date_dict = {}
+#             for d in data:
+#                 if d[4] not in date_dict:
+#                     filtered.append(d)
+#                     date_dict[d[4]] = 1
+#             data = filtered
+
+#     return data
