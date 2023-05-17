@@ -510,6 +510,26 @@ class HoldAssetList:
             awithdrawing, evalprice, buyestimated, ref_symbol_id
         )
 
+    @classmethod
+    def ParseHoldAssetList(
+        cls,
+        arr: list
+    ) -> HoldAssetList:
+        hold_asset_list = HoldAssetList()
+        for asset in arr:
+            hold_asset_list.add_hold_asset(
+                asset['asset'],
+                asset['desc'],
+                asset['free'],
+                asset['freeze'],
+                asset['locked'],
+                '0',
+                asset['evalPrice'],
+                asset['buyEstimated'],
+                asset['ref'],
+            )
+        return hold_asset_list
+
 
 class KrxDailyInvestor:
     def __init__(self,

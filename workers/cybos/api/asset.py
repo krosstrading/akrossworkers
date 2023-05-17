@@ -76,7 +76,7 @@ class CybosAsset:
 
 
 if __name__ == '__main__':
-    from akross.providers.cybos.cybos_api.account import CybosAccount
+    from workers.cybos.api.account import CybosAccount
 
     account = CybosAccount()
     asset = CybosAsset('KRX', account.get_account_number(),

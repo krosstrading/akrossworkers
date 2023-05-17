@@ -80,6 +80,7 @@ class StockExpectSubscribe(SubscribeBase):
 
         cum_qty = obj.GetHeaderValue(4)
         time_type = obj.GetHeaderValue(8)
+        print('time_type', time_type, '1' == time_type)
         if time_type == '1':
             time_type = TickTimeType.PreBid
         elif time_type == '2':
