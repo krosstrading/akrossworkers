@@ -18,6 +18,7 @@ from workers.cybos.api.daily_investor_group import get_daily_investor_group
 from workers.cybos.api.daily_program_trade import get_daily_program_trade
 from workers.cybos.api.orderbook import get_orderbook
 from workers.cybos.api.orderbook_extended import get_orderbook_extended
+from workers.cybos.api.rank_codes import get_rank_codes
 
 
 LOGGER = logging.getLogger(__name__)
@@ -34,6 +35,9 @@ class CybosRestWorker(RpcHandler):
         self.symbolInfo = self.on_symbol_info
         self._symbols = []
         self._market_time = None
+        self.marketEndTime = self.on_market_end_time
+        self.marketStartTime = self.on_market_start_time
+        self.amountRank = self.on_amount_rank_list
 
     def preload(self):
         LOGGER.warning('create symbol info')
@@ -106,6 +110,17 @@ class CybosRestWorker(RpcHandler):
     def on_symbol_info(self, **kwargs):
         return self._symbols
 
+    def on_market_end_time(self, **kwargs):
+        return int(aktime.inttime_to_datetime(
+            stock_code.get_market_end_time(), 'KRX').timestamp() * 1000)
+
+    def on_market_start_time(self, **kwargs):
+        return int(aktime.inttime_to_datetime(
+            stock_code.get_market_start_time(), 'KRX').timestamp() * 1000)
+
+    def on_amount_rank_list(self, **kwargs):
+        return get_rank_codes()
+
     def on_broker_list(self, **kwargs):
         LOGGER.info('%s', kwargs)
         result = []
@@ -118,7 +133,7 @@ class CybosRestWorker(RpcHandler):
                 'foreign': stock_code.is_member_foreign(member)
             })
         return result
-         
+
     def on_daily_investor_group(self, **kwargs):
         LOGGER.info('%s', kwargs)
         util.check_required_parameters(kwargs, 'symbol')
@@ -164,7 +179,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     conn = CybosConnection()
     if conn.is_connected():
-        conn = QuoteChannel('krx.spot', '127.0.0.1', 'akross', 'Akross@q')
+        conn = QuoteChannel('krx.spot')
         conn.connect()
         worker = CybosRestWorker()
         worker.preload()

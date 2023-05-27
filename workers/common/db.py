@@ -69,6 +69,12 @@ class Database:
             return await db[collection_name].find_one(query)
         return None
 
+    async def delete_many(self, db_name: str, collection_name: str, query: dict = {}):
+        if await self.connected():
+            db = self.client[db_name]
+            return await db[collection_name].delete_many(query)
+        return None
+
     async def insert_one(self, db_name: str, collection_name: str, data) -> None:
         if await self.connected():
             db = self.client[db_name]

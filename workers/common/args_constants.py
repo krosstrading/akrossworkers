@@ -28,6 +28,7 @@ class TickTimeType:
     ExtendedClose = 'ec'        # 시간외 종가 체결
     ExtendedTradingBid = 'etb'  # 시간외 단일가 동시호가
     ExtendedTrading = 'et'      # 시간외 단일가 체결
+    Unknown = 'un'
 
 
 class CandleLimitCount:

@@ -3,6 +3,7 @@ import logging
 from typing import Dict, List
 from PyQt5.QtCore import QCoreApplication, QTimer
 
+from akross.common import env
 from akross.connection.pika_qt.quote_channel import QuoteChannel
 from akross.connection.pika_qt.rpc_handler import RpcHandler
 from akross.common import util
@@ -40,6 +41,7 @@ class CybosStreamWorker(RpcHandler):
         self._market_check.timeout.connect(self.check_time)
         # APIs
         self.priceStream = self.on_price_stream
+        self.orderbookStream = self.on_orderbook_stream
 
     def preload(self):
         for code in stock_code.get_kospi_company_code_list():
@@ -58,6 +60,15 @@ class CybosStreamWorker(RpcHandler):
             kwargs['target'],
             kwargs['exchange'],
             ApiCommand.PriceStream,
+            False
+        )
+
+    def on_orderbook_stream(self, **kwargs):
+        util.check_required_parameters(kwargs, 'exchange', 'target')
+        self._handle_realtime_request(
+            kwargs['target'],
+            kwargs['exchange'],
+            ApiCommand.OrderbookStream,
             False
         )
 
@@ -186,7 +197,7 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     conn = CybosConnection()
     if conn.is_connected():
-        conn = QuoteChannel('krx.spot', '127.0.0.1', 'akross', 'Akross@q')
+        conn = QuoteChannel('krx.spot')
         conn.set_capacity(380)
         conn.connect()
         worker = CybosStreamWorker(conn)

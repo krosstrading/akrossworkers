@@ -94,6 +94,9 @@ async def main() -> None:
                     data[1], data[2], data[3], data[4],
                     data[0], data[6], data[5], data[7]
                 )
+                if adqp.end_time > now:
+                    continue
+
                 record_data.append(adqp.to_database())
 
             if len(record_data) > 0:

@@ -27,10 +27,10 @@ CYBOS_BASE_ASSET = 'KRW'
 class CybosAccountWorker(RpcHandler):
     def __init__(self):
         super().__init__()
-        self._account = None
+        self._account: CybosAccount = None
         self._asset = None
-        self._open_order = None
-        self._order = None
+        self._open_order: CybosOpenOrder = None
+        self._order: CybosOrder = None
         self._market = MARKET
         self.assetList = self.on_asset_list
         self.createOrder = self.on_create_order

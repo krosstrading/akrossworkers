@@ -163,7 +163,7 @@ class CybosOrder:
                         aktime.get_msec(),
                         OrderType.OrderLimit,
                         OrderResultType.New,
-                        OrderResultType.New,
+                        OrderResultType.SubTypeNew,
                         order_item.order_id,
                         str(order_item.orig_qty),
                         str(order_item.orig_price),

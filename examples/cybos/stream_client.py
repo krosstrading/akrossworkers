@@ -2,10 +2,15 @@ import asyncio
 
 from akross.connection.aio.quote_channel import QuoteChannel
 from workers.common.command import ApiCommand
+from akross.common import env
 
 
 async def stream_arrived(msg):
     print('stream msg', msg)
+
+
+async def orderbook_arrived(msg):
+    print('orderbook msg', msg)
 
 
 async def main():
@@ -14,6 +19,7 @@ async def main():
     await conn.wait_for_market('krx.spot')
     krx = conn.get_markets('krx.spot')
     await conn.subscribe_stream(krx[0], ApiCommand.PriceStream, stream_arrived, target='A005930')
+    # await conn.subscribe_stream(krx[0], ApiCommand.OrderbookStream, stream_arrived, target='A024900')
     await asyncio.get_running_loop().create_future()
 
 
@@ -22,5 +28,5 @@ if __name__ == '__main__':
     LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
                   '-35s %(lineno) -5d: %(message)s')
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-    conn = QuoteChannel('krx.spot', '172.17.64.1')
+    conn = QuoteChannel('krx.spot')
     asyncio.run(main())

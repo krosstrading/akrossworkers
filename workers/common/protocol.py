@@ -313,6 +313,15 @@ class PriceStreamProtocol:
             self.time_type
         ]
 
+    def to_database(self) -> dict:
+        return {
+            'time': self.event_time,
+            'timeType': self.time_type,
+            'price': str(self.price),
+            'qty': str(self.volume),
+            'position': self.is_buy
+        }
+
     # 동시호가, 장외시간 등 구분이 필요할까?
     @classmethod
     def CreatePriceStream(
@@ -356,14 +365,17 @@ class OrderbookStreamProtocol:
         self.event_time = aktime.get_msec()
         self.time_type = time_type
 
+    def to_database(self) -> dict:
+        return self.to_network()
+
     def to_network(self) -> dict:
         return {
-            'bid_all': self.bid_all,
-            'ask_all': self.ask_all,
+            'bidAll': self.bid_all,
+            'askAll': self.ask_all,
             'bids': self.bid_arr,
             'asks': self.ask_arr,
             'time': self.event_time,
-            'time_type': self.time_type
+            'timeType': self.time_type
         }
 
     @classmethod
@@ -382,6 +394,15 @@ class OrderbookStreamProtocol:
             ask_arr,
             time_type
         )
+
+    @classmethod
+    def ParseNetwork(cls, data: dict) -> Optional[OrderbookStreamProtocol]:
+        if 'bidAll' in data:
+            orderbook = OrderbookStreamProtocol(
+                data['bidAll'], data['askAll'], data['bids'], data['asks'], data['timeType'])
+            orderbook.event_time = data['time']
+            return orderbook
+        return None
 
 
 class ProgramTradeEvent:
@@ -493,6 +514,9 @@ class HoldAssetList:
 
     def __iter__(self):
         return iter(self.hold_assets.values())
+
+    def add_asset(self, hold_asset: HoldAsset):
+        self.hold_assets[hold_asset.asset_name] = hold_asset
 
     def add_hold_asset(self,
                        asset_name: str,
@@ -755,6 +779,26 @@ class OrderTradeEvent:
             'commissionAmount': self.commission_amount,
             'commissionAsset': self.commission_asset
         }
+
+    @classmethod
+    def ParseNetwork(cls, data: dict) -> Optional[OrderTradeEvent]:
+        event = OrderTradeEvent(
+            data['symbolId'],
+            data['side'],
+            data['eventTime'],
+            data['orderType'],
+            data['eventType'],
+            data['eventSubtype'],
+            data['orderId'],
+            data['orderOrigQty'],
+            data['orderOrigPrice'],
+            data['tradeQty'],
+            data['tradeCumQty'],
+            data['tradePrice'],
+            data['commissionAmount'],
+            data['commissionAsset']
+        )
+        return event
 
 
 class OrderResponse:
