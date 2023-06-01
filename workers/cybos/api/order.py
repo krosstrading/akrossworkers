@@ -276,7 +276,7 @@ class CybosOrder:
                 self.obj.SetInputValue(3, code)
                 self.obj.SetInputValue(4, quantity)
                 if price == 0:  # 시장가
-                    self.obj.setInputValue(8, '03')
+                    self.obj.SetInputValue(8, '03')
                 else:
                     self.obj.SetInputValue(5, price)
                 self.obj.BlockRequest()
