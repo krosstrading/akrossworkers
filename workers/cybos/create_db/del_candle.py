@@ -1,9 +1,8 @@
-from datetime import datetime
 import logging
 import sys
 from typing import List
 from PyQt5.QtCore import QCoreApplication
-from workers.cybos.api import stock_chart, stock_code
+from workers.cybos.api import stock_code
 from urllib.parse import quote_plus
 from pymongo import MongoClient
 from akross.common import aktime
@@ -64,63 +63,29 @@ def main() -> None:
     ]
     symbol_infos = create_symbol_info()
     client = MongoClient(MONGO_URI)
+    
     now = aktime.get_msec()
     for progress, symbol_info in enumerate(symbol_infos):
-        if len(sys.argv) > 1:
-            if sys.argv[1] == 'force':
-                pass
-            elif sys.argv[1].lower() != symbol_info.symbol.lower():
-                continue
-
-        if symbol_info.status != TradingStatus.Trading:
-            LOGGER.warning('not trading status %s', symbol_info.symbol.upper())
-            continue
-
-        start_time = symbol_info.listed
-        LOGGER.warning('start %s(%d/%d) listed: %s',
+        LOGGER.warning('start %s(%d/%d)',
                        symbol_info.symbol.upper(),
                        progress+1,
-                       len(symbol_infos),
-                       datetime.fromtimestamp(start_time / 1000))
+                       len(symbol_infos))
         for interval in intervals:
-            interval_start_time = start_time
             col = symbol_info.symbol.lower() + '_' + interval
             db = client[DBEnum.KRX_QUOTE_DB]
             db_col = db[col]
-            for latest_data in db_col.find().limit(1).sort([('$natural', -1)]):
-                interval_start_time = latest_data['endTime'] + 1
-                LOGGER.warning('last data for[%s](%s): %s',
-                               interval,
-                               symbol_info.symbol,
-                               datetime.fromtimestamp(latest_data['endTime'] / 1000))
-
             query = {
-                'startTime': interval_start_time,
-                'endTime': now,
+                'endTime': {'$gte': now}
             }
+            result = db_col.delete_many(query)
+            # query2 = {
+            #     'startTime': {'$gte': datetime(2023, 5, 22).timestamp() * 1000}
+            # }
+            # result = db_col.delete_many(query2)
 
-            if query['startTime'] >= query['endTime']:
-                LOGGER.warning('startTime is later than endTime')
-                continue
-            
-            candles = stock_chart.get_kline(symbol_info.symbol.upper(), interval, **query)
-            record_data = []
-            for data in candles:
-                if data.end_time > now:
-                    if 'force' in sys.argv and interval == '1d':
-                        pass
-                    else:
-                        continue
-                record_data.append(data.to_database())
-
-            if len(record_data) > 0:
-                LOGGER.warning('write to db(%s): len %d, from: %s, until: %s',
-                               interval, len(record_data),
-                               datetime.fromtimestamp(record_data[0]['startTime'] / 1000),
-                               datetime.fromtimestamp(record_data[-1]['endTime'] / 1000))
-                db_col.insert_many(record_data)
-                LOGGER.warning('write to db done')
+            LOGGER.warning('deleted(%s): %d', interval, result.deleted_count)
         LOGGER.warning('done %s', symbol_info.symbol.upper())
+    app.quit()
 
 
 if __name__ == '__main__':
@@ -134,6 +99,6 @@ if __name__ == '__main__':
     conn = CybosConnection()
     if conn.is_connected():
         main()
-        # sys.exit(app.exec_())
+        sys.exit(app.exec_())
     else:
         LOGGER.error('cybos is not connected')

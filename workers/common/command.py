@@ -2,6 +2,9 @@
 
 class ApiCommand:
     Candle = 'candle'
+    AmountRank = 'amountRank'
+    MarketEndTime = 'marketEndTime'
+    MarketStartTime = 'marketStartTime'
     SymbolInfo = 'symbolInfo'
     PriceStream = 'priceStream'
     BacktestStream = 'backtestStream'

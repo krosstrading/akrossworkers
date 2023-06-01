@@ -36,7 +36,7 @@ class StockSubscribe(SubscribeBase):
         # header 14, 19 return as int type
         time_type = obj.GetHeaderValue(19)
         time_flag = obj.GetHeaderValue(20)
-
+        # print('time type', time_type, 'time_flag', time_flag)
         if time_type != ord('2'):
             print('unknown time', time_type, time_flag)
 
@@ -49,7 +49,7 @@ class StockSubscribe(SubscribeBase):
             obj.GetHeaderValue(14) == ord('2'),
             (
                 TickTimeType.Normal if time_flag == ord('2')
-                else TickTimeType.ExtendedClose
+                else TickTimeType.ExtendedCloseBid
             )
         )  # return 49, 50 (int)
         return stream.to_network()
@@ -80,12 +80,12 @@ class StockExpectSubscribe(SubscribeBase):
 
         cum_qty = obj.GetHeaderValue(4)
         time_type = obj.GetHeaderValue(8)
-        print('time_type', time_type, '1' == time_type)
-        if time_type == '1':
+        
+        if time_type == ord('1'):
             time_type = TickTimeType.PreBid
-        elif time_type == '2':
+        elif time_type == ord('2'):
             time_type = TickTimeType.TradingBid
-        elif time_type == '3':
+        elif time_type == ord('3'):
             time_type = TickTimeType.MarketCloseBid
 
         stream = PriceStreamProtocol.CreatePriceStream(
@@ -167,8 +167,7 @@ class OrderbookSubscribe(SubscribeBase):
             d['total_bid_remain'],
             d['total_ask_remain'],
             d['bids'],
-            d['asks'],
-            0
+            d['asks']
         )
         return orderbook_stream.to_network()
 
@@ -203,7 +202,7 @@ class OrderbookExtendedSubscribe(SubscribeBase):
             d['total_ask_remain'],
             d['bids'],
             d['asks'],
-            1
+            TickTimeType.ExtendedTrading
         )
         return orderbook_stream.to_network()
 

@@ -227,13 +227,14 @@ def get_kline_by_period(symbol, interval_type, start_time, end_time):
                                interval_type,
                                yyyymmdd(end_dt - expected_range),
                                yyyymmdd(end_dt))
-    # print('request', yyyymmdd(end_dt - expected_range), yyyymmdd(end_dt))
+
     empty_count = 0
     response: List[PriceCandleProtocol] = data
     if len(data) == 0:
         return []
     else:
         fetched_start_time = response[0].start_time if len(response) > 0 else 0
+        
         while True:
             if len(response) > 0 and fetched_start_time < start_time:
                 break
@@ -243,10 +244,15 @@ def get_kline_by_period(symbol, interval_type, start_time, end_time):
                     fetched_start_time - aktime.interval_type_to_msec('d'), 'KRX')
             else:
                 end_time = aktime.msec_to_datetime(fetched_start_time - 1, 'KRX')
+            
             data = get_period_data_raw(symbol,
                                        interval_type,
                                        yyyymmdd(end_time - expected_range),
                                        yyyymmdd(end_time))
+            # 2023년 5월 29일 주봉 데이터, xxx ~ 28일까지 요청하였을 때, 데이터가 있다고 나오는 문제
+            # xxx ~ 28일까지 요청하였지만, 데이터가 시작시간 / 종료 시간이 29일 0:0:0 으로 나오는 예외처리
+            data = list(filter(lambda candle: candle.end_time <= end_time.timestamp() * 1000, data))
+            
             # print('request cont',
             #       yyyymmdd(end_time - expected_range),
             #       yyyymmdd(end_time),

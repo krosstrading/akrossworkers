@@ -182,20 +182,21 @@ def is_member_foreign(broker_code: str):
 
 
 if __name__ == '__main__':
+    print(get_market_end_time())
     # members = get_member_list()
-    
+
     # for member in members:
     #     print(member, get_member_name(member), is_member_foreign(member))
 
     # print(get_stock_listed_date('A005930'))
-    
-    kosdaq = get_kosdaq_company_code_list()
-    kospi = get_kospi_company_code_list()
-    print(kospi[0])
-    if 'A343510' in kospi:
-        print('KOSPI')
-    elif 'A343510' in kosdaq:
-        print('KOSDAQ')
+
+    # kosdaq = get_kosdaq_company_code_list()
+    # kospi = get_kospi_company_code_list()
+    # print(kospi[0])
+    # if 'A343510' in kospi:
+    #     print('KOSPI')
+    # elif 'A343510' in kosdaq:
+    #     print('KOSDAQ')
     # print(get_market_start_time(), get_market_end_time())
     # kosdaq_marketcaps = get_marketcaps(kosdaq)
     # kospi_marketcaps = get_marketcaps(kospi)
