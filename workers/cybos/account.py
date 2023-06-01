@@ -56,10 +56,7 @@ class CybosAccountWorker(RpcHandler):
             self._order.add_open_order(open_order)
         self._conn = AccountChannel(
             MARKET,
-            self._account.get_account_number(),
-            '127.0.0.1',
-            'akross',
-            'Akross@q'
+            self._account.get_account_number()
         )
         self._conn.connect()
         self._conn.run_bus(self)
