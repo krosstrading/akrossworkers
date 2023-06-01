@@ -3,6 +3,7 @@ import logging
 from typing import Dict, List
 from PyQt5.QtCore import QCoreApplication, QTimer
 
+from akross.common import env
 from akross.connection.pika_qt.quote_channel import QuoteChannel
 from akross.connection.pika_qt.rpc_handler import RpcHandler
 from akross.common import util
