@@ -346,8 +346,17 @@ class PriceStreamProtocol:
     def ParseNetwork(cls, arr: list) -> Optional[PriceStreamProtocol]:
         if len(arr) == 6:
             return PriceStreamProtocol(
-                arr[0], arr[1], float(arr[2]), float(arr[3]), arr[4], arr[5])
+                arr[0], arr[1], float(arr[2]), float(arr[3]), arr[4] == 's', arr[5])
         return None
+
+    @classmethod
+    def ParseDatabase(cls, symbol: str, db_data: dict) -> Optional[PriceStreamProtocol]:
+        return PriceStreamProtocol(
+            symbol,
+            db_data['time'], float(db_data['price']),
+            float(db_data['qty']), db_data['position'] == 's',
+            db_data['timeType']
+        )
 
 
 class OrderbookStreamProtocol:
