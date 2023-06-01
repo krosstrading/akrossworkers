@@ -71,7 +71,7 @@ def main() -> None:
                 pass
             elif sys.argv[1].lower() != symbol_info.symbol.lower():
                 continue
-            
+
         if symbol_info.status != TradingStatus.Trading:
             LOGGER.warning('not trading status %s', symbol_info.symbol.upper())
             continue
@@ -89,7 +89,7 @@ def main() -> None:
             db_col = db[col]
             for latest_data in db_col.find().limit(1).sort([('$natural', -1)]):
                 interval_start_time = latest_data['endTime'] + 1
-                LOGGER.warning('last data for[%s](%s): from %s',
+                LOGGER.warning('last data for[%s](%s): %s',
                                interval,
                                symbol_info.symbol,
                                datetime.fromtimestamp(latest_data['endTime'] / 1000))
@@ -99,6 +99,10 @@ def main() -> None:
                 'endTime': now,
             }
 
+            if query['startTime'] >= query['endTime']:
+                LOGGER.warning('startTime is later than endTime')
+                continue
+            
             candles = stock_chart.get_kline(symbol_info.symbol.upper(), interval, **query)
             record_data = []
             for data in candles:

@@ -24,17 +24,14 @@ def get_rank_codes():
         count = obj.GetHeaderValue(0)
         # print('count', count)
         """
-        0 - (ulong) 일자
-        1 - (long) 종가
-        2 - (double) 전일대비
-        3 - (long) 대비율
-        4 - (long) 거래량
-        5 - (long) 공매도량
-        6 - (long) 대차
-        7 - (long) 상환
-        8 - (long) 대차잔고증감
-        9 - (long) 대차잔고주수
-        10 - (long) 대차잔고금액 (백만원 단위)
+        0 - (short) 순위
+        1 - (string) 종목코드
+        2 - (string) 종목명
+        3 - (long) 현재가
+        4 - (long) 전일대비
+        5 - (float) 전일대비율
+        6 - (long) 거래량
+        7 - (long) 거래대금 (만원, 코스닥으로 선택시에는 천원)
         """
         for i in range(count):
             d = {}
@@ -43,7 +40,7 @@ def get_rank_codes():
                 d[str(j)] = obj.GetDataValue(j, i)
 
             if is_company_stock(d['1']):
-                datas.append(d['1'])
+                datas.append([d['1'], d['7'] * 10000])
     except Exception as e:
         LOGGER.error('fetch data failed %s', str(e))
 
