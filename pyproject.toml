@@ -61,8 +61,7 @@ packages = ["akrossworkers",
             "akrossworkers.cybos.api",
             "akrossworkers.cybos.create_db",
             "akrossworkers.common",
-            "akrossworkers.common.backtest",
-            "akrossworkers.common.cache"]
+            "akrossworkers.common.backtest"]
 
 [flake8]
 max-line-length = 120
