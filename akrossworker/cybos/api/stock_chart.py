@@ -8,6 +8,7 @@ from akrossworker.common.args_constants import ApiArgKey as apikey
 from akrossworker.cybos.api import com_obj
 from akrossworker.cybos.api.connection import CybosConnection
 from akrossworker.common.protocol import PriceCandleProtocol
+from akrossworker.cybos.api.util import yyyymmdd, yyyymmdd_except_holiday
 
 
 LOGGER = logging.getLogger(__name__)
@@ -36,10 +37,6 @@ def decrease_minute(inttime):
     if min == 0:
         return (hour - 1) * 100 + 59
     return hour * 100 + (min - 1)
-
-
-def yyyymmdd(dt):
-    return dt.year * 10000 + dt.month * 100 + dt.day
 
 
 def cybos_week_interval(intweek: int):
@@ -196,7 +193,7 @@ def get_kline_by_count(symbol, interval_type, count):
     data = get_period_data_raw(symbol,
                                interval_type,
                                yyyymmdd(today - expected_range),
-                               yyyymmdd(today))
+                               yyyymmdd_except_holiday(today))
     response: List[PriceCandleProtocol] = data
     if len(response) == 0:
         return []
@@ -212,7 +209,7 @@ def get_kline_by_count(symbol, interval_type, count):
             data = get_period_data_raw(symbol,
                                        interval_type,
                                        yyyymmdd(end_time - expected_range),
-                                       yyyymmdd(end_time))
+                                       yyyymmdd_except_holiday(end_time))
             response[:0] = data
             if len(data) == 0 or len(response) > count:
                 break
@@ -226,7 +223,7 @@ def get_kline_by_period(symbol, interval_type, start_time, end_time):
     data = get_period_data_raw(symbol,
                                interval_type,
                                yyyymmdd(end_dt - expected_range),
-                               yyyymmdd(end_dt))
+                               yyyymmdd_except_holiday(end_dt))
 
     empty_count = 0
     response: List[PriceCandleProtocol] = data
@@ -248,7 +245,7 @@ def get_kline_by_period(symbol, interval_type, start_time, end_time):
             data = get_period_data_raw(symbol,
                                        interval_type,
                                        yyyymmdd(end_time - expected_range),
-                                       yyyymmdd(end_time))
+                                       yyyymmdd_except_holiday(end_time))
             # 2023년 5월 29일 주봉 데이터, xxx ~ 28일까지 요청하였을 때, 데이터가 있다고 나오는 문제
             # xxx ~ 28일까지 요청하였지만, 데이터가 시작시간 / 종료 시간이 29일 0:0:0 으로 나오는 예외처리
             data = list(filter(lambda candle: candle.end_time <= end_time.timestamp() * 1000, data))
