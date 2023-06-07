@@ -52,22 +52,21 @@ Source = "https://github.com/krosstrading/akrossbase"
 
 [tool.setuptools]
 zip-safe = true
-include-package-data = false
-packages = ["examples.binance",
-            "examples.cybos",
-            "examples.database",
-            "workers.binance",
-            "workers.binance.api",
-            "workers.binance.create_db",
-            "workers.cybos",
-            "workers.cybos.api",
-            "workers.cybos.create_db",
-            "workers.common",
-            "workers.common.backtest",
-            "workers.common.cache"]
+include-package-data = true
+packages = ["akrossworkers",
+            "akrossworkers.binance",
+            "akrossworkers.binance.api",
+            "akrossworkers.binance.create_db",
+            "akrossworkers.cybos",
+            "akrossworkers.cybos.api",
+            "akrossworkers.cybos.create_db",
+            "akrossworkers.common",
+            "akrossworkers.common.backtest",
+            "akrossworkers.common.cache"]
 
 [flake8]
 max-line-length = 120
 
 [tool.setuptools.package-data]
 "*" = ["LICENSE", "README.md"]
+"akrossworkers" = ["data/*.xls"]

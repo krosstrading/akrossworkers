@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from workers.common.db import Database
+from akrossworkers.common.db import Database
 
 
 async def read(db_name, collection, query):
@@ -13,7 +13,7 @@ async def read(db_name, collection, query):
 
 
 async def main():
-    data = await read('binance_quote', 'btcusdt_1m', {})
+    data = await read('krx_quote', 'a005930_1d', {})
     start_times = {}
     for d in data:
         if d['startTime'] not in start_times:

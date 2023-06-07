@@ -1,7 +1,7 @@
 import asyncio
 from akross.connection.aio.account_channel import AccountChannel
 
-from workers.common.command import AccountApiCommand
+from akrossworkers.common.command import AccountApiCommand
 
 
 async def account_event(cmd, payload):

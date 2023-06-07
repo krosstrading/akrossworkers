@@ -3,7 +3,7 @@ from datetime import datetime
 
 from akross.connection.aio.quote_channel import QuoteChannel
 from akross.common import enums
-from workers.common.command import ApiCommand
+from akrossworkers.common.command import ApiCommand
 
 
 async def main():
