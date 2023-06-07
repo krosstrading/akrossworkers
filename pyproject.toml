@@ -3,7 +3,7 @@ requires = ["setuptools>=61.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "akrossworkers"
+name = "akrossworker"
 version = "0.1.2"
 maintainers = [
     {name = "Yongwoo Park", email = "nnnlife@gmail.com"},
@@ -45,27 +45,27 @@ file = "README.md"
 content-type = "text/markdown"
 
 [project.urls]
-Homepage = "https://github.com/krosstrading/akrossbase"
-Source = "https://github.com/krosstrading/akrossbase"
+Homepage = "https://github.com/krosstrading/akrossworker"
+Source = "https://github.com/krosstrading/akrossworker"
 
 [project.optional-dependencies]
 
 [tool.setuptools]
 zip-safe = true
 include-package-data = true
-packages = ["akrossworkers",
-            "akrossworkers.binance",
-            "akrossworkers.binance.api",
-            "akrossworkers.binance.create_db",
-            "akrossworkers.cybos",
-            "akrossworkers.cybos.api",
-            "akrossworkers.cybos.create_db",
-            "akrossworkers.common",
-            "akrossworkers.common.backtest"]
+packages = ["akrossworker",
+            "akrossworker.binance",
+            "akrossworker.binance.api",
+            "akrossworker.binance.create_db",
+            "akrossworker.cybos",
+            "akrossworker.cybos.api",
+            "akrossworker.cybos.create_db",
+            "akrossworker.common",
+            "akrossworker.common.backtest"]
 
 [flake8]
 max-line-length = 120
 
 [tool.setuptools.package-data]
 "*" = ["LICENSE", "README.md"]
-"akrossworkers" = ["data/*.xls"]
+"akrossworker" = ["data/*.xls"]

@@ -1,7 +1,7 @@
 import asyncio
 
 from akross.connection.aio.quote_channel import QuoteChannel
-from akrossworkers.common.command import ApiCommand
+from akrossworker.common.command import ApiCommand
 from akross.common import env
 
 

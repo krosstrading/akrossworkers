@@ -1,12 +1,12 @@
 from datetime import datetime
 import sys
 import asyncio
-from akrossworkers.common.db import Database
+from akrossworker.common.db import Database
 from akross.common import aktime
-from akrossworkers.common.args_constants import (
+from akrossworker.common.args_constants import (
     CandleLimitDays
 )
-from akrossworkers.common.protocol import (
+from akrossworker.common.protocol import (
     PriceCandleProtocol
 )
 

@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from akrossworkers.common.db import Database
+from akrossworker.common.db import Database
 
 
 async def read(db_name, collection, query):
