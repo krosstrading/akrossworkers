@@ -20,6 +20,7 @@ class DBEnum(str, Enum):
     KRX_BROKER_DB = 'krx_broker'
     KRX_PERFORMANCE_DB = 'krx_performance'
     KRX_QUOTE_DB = 'krx_quote'
+    KRX_AMOUNT_RANKING_DB = 'krx_amount_rank'
     BINANCE_QUOTE_DB = 'binance_quote'
 
 
