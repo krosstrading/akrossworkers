@@ -36,7 +36,8 @@ dependencies = [
     "aiohttp",
     "pandas",
     "motor",
-    "openpyxl"
+    "openpyxl",
+    "xlrd"
 ]
 requires-python = ">=3.7"
 
