@@ -42,6 +42,7 @@ class BacktestCandle:
         self.time_frame_candle = None
         self.exchange = exchange
         if len(time_frame) > 0:
+            time_frame = 'm' if time_frame == 'r' else time_frame
             self.time_frame_candle = TimeFrameCandle(
                 db, db_name, conn, market, symbol_info, time_frame, start_time, end_time)
 

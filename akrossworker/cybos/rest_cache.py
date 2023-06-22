@@ -1,7 +1,9 @@
 import asyncio
 import logging
 import sys
-from typing import Dict
+from typing import Dict, List
+
+from akross.common import aktime
 
 from akross.connection.aio.quote_channel import QuoteChannel, Market
 from akross.common import enums, util
@@ -28,6 +30,7 @@ class CybosRestCache(RpcBase):
         self.symbolInfo = self.on_symbol_info
         self.orderbook = self.on_orderbook
         self.search = self.on_search
+        self.krxRank = self.on_krx_rank_symbols
 
         self._worker: Market = None
         self._symbols: Dict[str, CandleCache] = {}
@@ -57,12 +60,11 @@ class CybosRestCache(RpcBase):
             LOGGER.info('progress(%s) %d/%d', symbol_info.symbol, i+1, len(symbols))
             if symbol_info.symbol not in self._symbols:
                 symbol_name = symbol_info.symbol.lower()
-                if symbol_name == 'a247540' or symbol_name == 'a086520':
-                    self._symbols[symbol_name] = \
-                        CybosCandleCache(
-                            self._db, DBEnum.KRX_QUOTE_DB,
-                            self._conn, self._worker, symbol_info)
-                    await self._symbols[symbol_name].run()
+                self._symbols[symbol_name] = \
+                    CybosCandleCache(
+                        self._db, DBEnum.KRX_QUOTE_DB,
+                        self._conn, self._worker, symbol_info)
+                # await self._symbols[symbol_name].run()
 
     async def on_orderbook(self, **kwargs):
         util.check_required_parameters(kwargs, 'symbol')
@@ -77,6 +79,21 @@ class CybosRestCache(RpcBase):
         symbol = kwargs['symbol'].lower()
         if symbol in self._symbols:
             return self._symbols[symbol].get_data(interval)
+        return []
+
+    async def on_krx_rank_symbols(self, **kwargs):
+        util.check_required_parameters(kwargs, 'searchDate')
+        search_time = aktime.get_start_time(kwargs['searchDate'], 'd', 'KRX')
+        data = await self._db.get_data(DBEnum.KRX_HAS_PROFIT_DB, 'ranks', {
+            'startTime': {'$gte': search_time},
+            'endTime': {'$lte': search_time + aktime.interval_type_to_msec('d') - 1}
+        })
+        if len(data) == 1:
+            symbol_infos = []
+            for symbol in data[0]['symbols']:
+                if symbol in self._symbols:
+                    symbol_infos.append(self._symbols[symbol].symbol_info.to_network())
+            return symbol_infos
         return []
 
     async def on_symbol_info(self, **kwargs):
