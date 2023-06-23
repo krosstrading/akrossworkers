@@ -5,6 +5,7 @@ import logging
 
 from akross.connection.aio.quote_channel import QuoteChannel, Market
 from akross.common import aktime
+from akrossworker.common.backtest.realtime_candle import RealtimeCandle
 
 from akrossworker.common.backtest.time_frame_candle import TimeFrameCandle
 from akrossworker.common.backtest.unit_candle import BacktestUnitCandle
@@ -12,6 +13,7 @@ from akrossworker.common.command import ApiCommand
 
 from akrossworker.common.db import Database
 from akrossworker.common.protocol import (
+    PriceStreamProtocol,
     SymbolInfo
 )
 
@@ -42,9 +44,12 @@ class BacktestCandle:
         self.time_frame_candle = None
         self.exchange = exchange
         if len(time_frame) > 0:
-            time_frame = 'm' if time_frame == 'r' else time_frame
-            self.time_frame_candle = TimeFrameCandle(
-                db, db_name, conn, market, symbol_info, time_frame, start_time, end_time)
+            if time_frame == 'r':
+                self.time_frame_candle = RealtimeCandle(
+                    db, db_name, conn, market, symbol_info, start_time)
+            else:
+                self.time_frame_candle = TimeFrameCandle(
+                    db, db_name, conn, market, symbol_info, time_frame, start_time, end_time)
 
     async def setup(self):
         # read from database
@@ -68,8 +73,15 @@ class BacktestCandle:
                         frame.to_network()
                     )
 
+    async def add_stream_data(self, stream: PriceStreamProtocol):
+        if self.time_frame_candle is not None:
+            self.time_frame_candle.add_stream(stream)
+            for candle in self.candles.values():
+                await candle.update_stream_data(stream)
+
     async def get_data(self, interval: str):
         interval, interval_type = aktime.interval_dissect(interval)
+        print(self.time_frame_candle is not None, self.time_frame_candle.get_interval_type(), interval_type)
         if (self.time_frame_candle is not None and
                 self.time_frame_candle.get_interval_type() == interval_type):
             return self.time_frame_candle.get_data(interval)

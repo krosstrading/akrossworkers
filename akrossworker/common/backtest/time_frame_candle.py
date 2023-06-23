@@ -1,4 +1,3 @@
-from datetime import datetime
 import logging
 from typing import List
 
@@ -7,7 +6,7 @@ from akross.common import aktime
 from akrossworker.common.args_constants import (
     CandleLimitDays
 )
-from akrossworker.common.command import ApiCommand
+
 from akrossworker.common import grouping
 
 from akrossworker.common.db import Database
@@ -97,39 +96,5 @@ class TimeFrameCandle:
             candle = PriceCandleProtocol.ParseDatabase(data)
             self.data.append(candle)
 
-        if len(self.data) > 0:
-            LOGGER.info('database last data %s', datetime.fromtimestamp(self.data[-1].end_time / 1000))
-
-        query_start_time = self.get_db_start_search()
-        db_last_record = 0
-        if len(self.data) > 0:
-            query_start_time = self.data[-1].end_time + 1
-            db_last_record = self.data[-1].end_time
-
-        LOGGER.info('query start time %s, self.end_time %s',
-                    datetime.fromtimestamp(query_start_time / 1000),
-                    datetime.fromtimestamp(self.end_time / 1000))
-        if query_start_time < self.end_time:
-            query = {
-                'cache': False,
-                'symbol': self.symbol_info.symbol,
-                'interval': '1' + self.interval_type,
-                'startTime': query_start_time,
-                'endTime': self.end_time,
-                'timeout': 600
-            }
-            LOGGER.info('query to server %s', query)
-            ret, resp = await self.conn.api_call(
-                self.market, ApiCommand.Candle, **query)
-
-            if resp is not None and isinstance(resp, list):
-                LOGGER.info('api query %s, data len(%d)', query, len(resp))
-                for data in resp:
-                    candle = PriceCandleProtocol.ParseNetwork(data)
-                    if candle.start_time <= db_last_record:
-                        continue
-                    self.data.append(candle)
-            else:
-                LOGGER.error('fetch error(%s) interval:%s',
-                             self.symbol_info.symbol, self.interval_type)
         self._set_current_time(self.start_time)
+        # only use database data for a speed

@@ -101,13 +101,32 @@ class Database:
             return await cursor.to_list(None)
         return []
 
+    async def get_price_stream_data(self, symbol: str, start_time: int, end_time: int):
+        return await self.get_data(
+            'throwback',
+            'p_' + symbol.lower(),
+            {
+                'time': {'$gte': start_time, '$lte': end_time}
+            }
+        )
+    
+    async def get_orderbook_stream_data(self, symbol: str, start_time: int, end_time: int):
+        return await self.get_data(
+            'throwback',
+            'o_' + symbol.lower(),
+            {
+                'time': {'$gte': start_time, '$lte': end_time}
+            }
+        )
+
 
 async def test_main():
     from datetime import datetime
     db = Database()
     await db.connected()
-    result = await db.find_latest(DBEnum.BINANCE_QUOTE_DB, 'btcusdt_1d', 1)
-    print(datetime.fromtimestamp(result[0]['endTime'] / 1000))
+    result = await db.get_data(DBEnum.KRX_QUOTE_DB, 'a294140_1M')
+    for data in result:
+        print(datetime.fromtimestamp(data['endTime'] / 1000))
 
 
 if __name__ == '__main__':

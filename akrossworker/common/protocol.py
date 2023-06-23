@@ -373,6 +373,12 @@ class OrderbookStreamProtocol:
         self.ask_arr = ask_arr
         self.event_time = aktime.get_msec()
         self.time_type = time_type
+        self.symbol = ''
+
+    #  set_target / get_target are convenient member property to identify target
+    #  not for delivery
+    def set_target(self, symbol: str):
+        self.symbol = symbol
 
     def to_database(self) -> dict:
         return self.to_network()

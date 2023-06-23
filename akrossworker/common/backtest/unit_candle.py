@@ -9,7 +9,6 @@ from akrossworker.common.args_constants import (
     TickTimeType,
     CandleLimitCount
 )
-from akrossworker.common.command import ApiCommand
 from akrossworker.common import grouping
 
 from akrossworker.common.db import Database
@@ -81,59 +80,17 @@ class BacktestUnitCandle:
         for data in stored:
             candle = PriceCandleProtocol.ParseDatabase(data)
             self.data.append(candle)
-        if len(self.data) > 0:
-            LOGGER.info('db fetched last time(%s), %s',
-                        self.interval_type,
-                        datetime.fromtimestamp(self.data[-1].end_time / 1000))
 
-        query_start_time = self.get_db_start_search()
-        if len(self.data) > 0:
-            query_start_time = self.data[-1].end_time + 1
-            db_last_record = self.data[-1].end_time
-
-        query = {
-            'cache': False,
-            'symbol': self.symbol_info.symbol,
-            'interval': '1' + self.interval_type,
-            'startTime': query_start_time,
-            'endTime': self.current_time
-        }
-
-        if query_start_time < self.current_time:
-            _, resp = await self.conn.api_call(
-                self.market, ApiCommand.Candle, **query)
-
-            if resp is not None and isinstance(resp, list):
-                LOGGER.info('api query %s, data len(%d)', query, len(resp))
-                if len(resp) > 0:
-                    LOGGER.info('last fetched data %s %s',
-                                datetime.fromtimestamp(resp[-1][4] / 1000),
-                                datetime.fromtimestamp(resp[-1][5] / 1000))
-                for data in resp:
-                    candle = PriceCandleProtocol.ParseNetwork(data)
-                    if candle.end_time > self.current_time or candle.start_time <= db_last_record:
-                        # remove progressive candle
-                        LOGGER.info('ignore data candle end time: %s, current: %s',
-                                    datetime.fromtimestamp(candle.end_time / 1000),
-                                    datetime.fromtimestamp(self.current_time / 1000))
-                        continue
-                    self.data.append(candle)
-            else:
-                LOGGER.error('fetch error(%s) interval:%s',
-                             self.symbol_info.symbol, self.interval_type)
         self.fetch_done = True
         return self.data[-1].end_time if len(self.data) > 0 else 0
 
-    async def add_new_candle(self, s: PriceStreamProtocol):
-        start_time = self.get_start_time(s.event_time)
+    async def add_new_candle(self, stream: PriceStreamProtocol):
+        start_time = self.get_start_time(stream.event_time)
         end_time = self.get_end_time(start_time)
-
-        self.data.append(PriceCandleProtocol.CreatePriceCandle(
-            s.price, s.price, s.price, s.price,
+        return PriceCandleProtocol(
+            int(stream.price), int(stream.price), int(stream.price), int(stream.price),
             start_time, end_time,
-            s.volume, float(s.volume) * float(s.price),
-            s.time_type
-        ))
+            int(stream.volume), int(stream.volume) * int(stream.price), stream.time_type, False)
 
     async def add_new_by_candle(self, candle: PriceCandleProtocol):
         # candle should be more smaller time unit
@@ -187,35 +144,34 @@ class BacktestUnitCandle:
             elif candle.start_time > last_candle.end_time:
                 await self.add_new_by_candle(candle)
 
-    async def update_stream_data(self, stream: list):
+    async def update_stream_data(self, stream: PriceStreamProtocol):
         if not self.fetch_done:
             return
 
-        s = PriceStreamProtocol.ParseNetwork(stream)
         as_new = False
-        if not self._is_apply_extended() and s.time_type != TickTimeType.Normal:
+        if not self._is_apply_extended() and stream.time_type != TickTimeType.Normal:
             return
 
         if len(self.data) > 0:
             last_time_type = self.data[-1].time_type
-            if s.time_type != last_time_type:
+            if stream.time_type != last_time_type:
                 as_new = True
         else:
             as_new = True
 
         if as_new:
-            await self.add_new_candle(s)
+            await self.add_new_candle(stream)
         else:
             last_candle = self.data[-1]
-            if last_candle.end_time >= s.event_time:
-                last_candle.price_close = s.price
-                if float(s.price) > last_candle.price_high:
-                    last_candle.price_high = s.price
-                if float(s.price) < last_candle.price_low:
-                    last_candle.price_low = s.price
-                last_candle.add_base_asset_volume(s.volume)
-                last_candle.add_quote_asset_volume(float(s.volume) * float(s.price))
-            elif s.event_time < last_candle.start_time:
+            if last_candle.end_time >= stream.event_time:
+                last_candle.price_close = int(stream.price)
+                if float(stream.price) > last_candle.price_high:
+                    last_candle.price_high = int(stream.price)
+                if float(stream.price) < last_candle.price_low:
+                    last_candle.price_low = int(stream.price)
+                last_candle.add_base_asset_volume(stream.volume)
+                last_candle.add_quote_asset_volume(float(stream.volume) * float(stream.price))
+            elif stream.event_time < last_candle.start_time:
                 LOGGER.warning('stream time is past')
             else:
-                await self.add_new_candle(s)
+                await self.add_new_candle(stream)

@@ -12,7 +12,11 @@ class ApiCommand:
     OrderbookStream = 'orderbookStream'
     ProgramStream = 'programStream'
     BrokerStream = 'brokerStream'
+    CreateBacktest = 'createBacktest'
+    FinishBacktest = 'finishBacktest'
     Next = 'next'
+    Play = 'play'
+    Pause = 'pause'
 
 
 class AccountApiCommand:
