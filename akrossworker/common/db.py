@@ -124,7 +124,7 @@ async def test_main():
     from datetime import datetime
     db = Database()
     await db.connected()
-    result = await db.get_data(DBEnum.KRX_QUOTE_DB, 'a294140_1M')
+    result = await db.get_data(DBEnum.KRX_QUOTE_DB, 'a001140_1m')
     for data in result:
         print(datetime.fromtimestamp(data['endTime'] / 1000))
 

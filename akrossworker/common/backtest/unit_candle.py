@@ -84,24 +84,21 @@ class BacktestUnitCandle:
         self.fetch_done = True
         return self.data[-1].end_time if len(self.data) > 0 else 0
 
-    async def add_new_candle(self, stream: PriceStreamProtocol):
+    def add_new_candle(self, stream: PriceStreamProtocol, is_same_type=True):
         start_time = self.get_start_time(stream.event_time)
         end_time = self.get_end_time(start_time)
         return PriceCandleProtocol(
             int(stream.price), int(stream.price), int(stream.price), int(stream.price),
-            start_time, end_time,
+            start_time if is_same_type else stream.event_time, end_time,
             int(stream.volume), int(stream.volume) * int(stream.price), stream.time_type, False)
 
-    async def add_new_by_candle(self, candle: PriceCandleProtocol):
+    def add_new_by_candle(self, candle: PriceCandleProtocol, is_same_type=True):
         # candle should be more smaller time unit
         start_time = self.get_start_time(candle.start_time)
         end_time = self.get_end_time(start_time)
-        # LOGGER.info('from:%s, until:%s',
-        #             datetime.fromtimestamp(start_time / 1000),
-        #             datetime.fromtimestamp(end_time / 1000))
         self.data.append(PriceCandleProtocol.CreatePriceCandle(
             candle.price_open, candle.price_high, candle.price_low, candle.price_close,
-            start_time, end_time,
+            start_time if is_same_type else candle.start_time, end_time,
             candle.base_asset_volume, candle.quote_asset_volume,
             candle.time_type
         ))
@@ -114,24 +111,19 @@ class BacktestUnitCandle:
     async def update_candle_data(self, candle: PriceCandleProtocol):
         if not self.fetch_done:
             return
-
-        if not self._is_apply_extended() and candle.time_type != TickTimeType.Normal:
+        elif not self._is_apply_extended() and candle.time_type != TickTimeType.Normal:
             return
 
-        as_new = False
-        if len(self.data) > 0:
-            last_time_type = self.data[-1].time_type
-            if candle.time_type != last_time_type:
-                as_new = True
-        else:
-            as_new = True
-
-        if as_new:
-            await self.add_new_by_candle(candle)
+        if len(self.data) == 0:
+            self.data.append(self.add_new_by_candle(candle))
         else:
             # unit candle 이므로 단위가 걸쳐 있을 수 없음
             last_candle = self.data[-1]
-            if last_candle.end_time >= candle.end_time:
+            if candle.start_time > last_candle.end_time:
+                self.add_new_by_candle(candle)
+            elif last_candle.time_type != candle.time_type:
+                self.data.append(self.add_new_by_candle(candle, False))
+            elif last_candle.end_time >= candle.end_time:
                 last_candle.price_close = candle.price_close
                 if candle.price_high > last_candle.price_high:
                     last_candle.price_high = candle.price_high
@@ -139,39 +131,29 @@ class BacktestUnitCandle:
                     last_candle.price_low = candle.price_low
                 last_candle.add_base_asset_volume(candle.base_asset_volume)
                 last_candle.add_quote_asset_volume(candle.quote_asset_volume)
-            elif candle.end_time < last_candle.start_time:
-                LOGGER.warning('candle time is past')
-            elif candle.start_time > last_candle.end_time:
-                await self.add_new_by_candle(candle)
 
     async def update_stream_data(self, stream: PriceStreamProtocol):
         if not self.fetch_done:
             return
-
-        as_new = False
-        if not self._is_apply_extended() and stream.time_type != TickTimeType.Normal:
+        elif not self._is_apply_extended() and stream.time_type != TickTimeType.Normal:
             return
 
-        if len(self.data) > 0:
-            last_time_type = self.data[-1].time_type
-            if stream.time_type != last_time_type:
-                as_new = True
-        else:
-            as_new = True
-
-        if as_new:
-            await self.add_new_candle(stream)
+        if len(self.data) == 0:
+            self.data.append(self.add_new_candle(stream))
         else:
             last_candle = self.data[-1]
-            if last_candle.end_time >= stream.event_time:
+            last_end_time = last_candle.end_time
+            last_start_time = last_candle.start_time
+            if last_end_time < stream.event_time:
+                self.data.append(self.add_new_candle(stream))
+            elif last_candle.time_type != stream.time_type:
+                self.data.append(self.add_new_candle(stream, False))
+            elif last_start_time <= stream.event_time:
                 last_candle.price_close = int(stream.price)
-                if float(stream.price) > last_candle.price_high:
+                if int(stream.price) > int(last_candle.price_high):
                     last_candle.price_high = int(stream.price)
-                if float(stream.price) < last_candle.price_low:
+                if int(stream.price) < int(last_candle.price_low):
                     last_candle.price_low = int(stream.price)
                 last_candle.add_base_asset_volume(stream.volume)
-                last_candle.add_quote_asset_volume(float(stream.volume) * float(stream.price))
-            elif stream.event_time < last_candle.start_time:
-                LOGGER.warning('stream time is past')
-            else:
-                await self.add_new_candle(stream)
+                last_candle.add_quote_asset_volume(int(stream.price) * int(stream.volume))
+

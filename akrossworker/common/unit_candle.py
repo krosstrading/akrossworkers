@@ -139,7 +139,7 @@ class UnitCandle:
             return True
         return False
 
-    async def update_stream_data(self, stream: list):
+    def update_stream_data(self, stream: list):
         if not self.fetch_done:
             return
 
@@ -156,7 +156,7 @@ class UnitCandle:
             as_new = True
 
         if as_new:
-            await self.add_new_candle(s)
+            self.add_new_candle(s)
         else:
             last_candle = self.data[-1]
             if last_candle.end_time >= s.event_time:
@@ -170,4 +170,4 @@ class UnitCandle:
             elif s.event_time < last_candle.start_time:
                 LOGGER.warning('stream time is past')
             else:
-                await self.add_new_candle(s)
+                self.add_new_candle(s)

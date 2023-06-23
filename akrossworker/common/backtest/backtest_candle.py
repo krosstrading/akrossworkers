@@ -73,11 +73,11 @@ class BacktestCandle:
                         frame.to_network()
                     )
 
-    async def add_stream_data(self, stream: PriceStreamProtocol):
+    def add_stream_data(self, stream: PriceStreamProtocol):
         if self.time_frame_candle is not None:
             self.time_frame_candle.add_stream(stream)
             for candle in self.candles.values():
-                await candle.update_stream_data(stream)
+                candle.update_stream_data(stream)
 
     async def get_data(self, interval: str):
         interval, interval_type = aktime.interval_dissect(interval)
