@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import sys
-from typing import Dict
+from typing import Dict, List
 import aio_pika
 
 from akross.common import env
@@ -142,41 +142,45 @@ class CybosBacktestWorker(RpcBase):
             return await self._backtestCandle[symbol].get_data(interval)
         return []
 
+    async def _prefetch_stream(self, targets: List[str], current: int, interval: int):
+        stream_data = []
+        for symbol in targets:
+            prices = await self._db.get_price_stream_data(symbol, current, current + interval)
+            for price in prices:
+                stream_data.append(PriceStreamProtocol.ParseDatabase(symbol, price))
+            orderbooks = await self._db.get_orderbook_stream_data(symbol, current, current + interval)
+            for orderbook in orderbooks:
+                obs = OrderbookStreamProtocol.ParseNetwork(orderbook)
+                obs.set_target(symbol)
+                stream_data.append(obs)
+        LOGGER.warning('total %d fetched', len(stream_data))
+        if len(stream_data) > 0:
+            return sorted(stream_data, key=lambda x: x.event_time)
+        return []
+        
     async def start_stream(self, **kwargs):
         targets = self._timeFrame['targets']
         LOGGER.warning('start stream targets: %s', targets)
         interval = aktime.interval_type_to_msec('m') * 10
         self._is_streaming = True
-        while not self._stream_stop and self._timeFrame['current'] < self._timeFrame['end']:
-            stream_data = []
+        stream_data = []
+        while not self._stream_stop and self._timeFrame['current'] <= self._timeFrame['end'] + interval:
+            prefetch_task = asyncio.create_task(
+                self._prefetch_stream(targets, self._timeFrame['current'], interval))
             current = self._timeFrame['current']
             LOGGER.warning('current %s', datetime_str(current))
-            for symbol in targets:
-                prices = await self._db.get_price_stream_data(symbol, current, current + interval)
-                for price in prices:
-                    stream_data.append(PriceStreamProtocol.ParseDatabase(symbol, price))
-                orderbooks = await self._db.get_orderbook_stream_data(symbol, current, current + interval)
-                for orderbook in orderbooks:
-                    obs = OrderbookStreamProtocol.ParseNetwork(orderbook)
-                    obs.set_target(symbol)
-                    stream_data.append(obs)
-            LOGGER.warning('total %d fetched', len(stream_data))
 
-            if len(stream_data) == 0:
-                self._timeFrame['current'] += interval
-                LOGGER.warning('no streams')
-            else:
-                sorted_stream = sorted(stream_data, key=lambda x: x.event_time)
-                self._timeFrame['current'] = sorted_stream[-1].event_time + 1
+            self._timeFrame['current'] += interval
+            if len(stream_data) > 0:
                 current_time = aktime.get_msec()
-                current_frametime = sorted_stream[0].event_time
-                while len(sorted_stream) > 0:
+                current_frametime = stream_data[0].event_time
+                while len(stream_data) > 0:
                     if self._stream_pause:
                         LOGGER.warning('pause state')
                         await asyncio.sleep(1)
                         continue
                         
-                    stream = sorted_stream.pop(0)
+                    stream = stream_data.pop(0)
                     frame_timegap = (stream.event_time - current_frametime) / self._stream_speed
                     realtime_gap = aktime.get_msec() - current_time
                     if self._stream_stop:
@@ -186,7 +190,6 @@ class CybosBacktestWorker(RpcBase):
                         # LOGGER.warning('sleep %f', (frame_timegap - realtime_gap) / 1000)
                         await asyncio.sleep((frame_timegap - realtime_gap) / 1000)
 
-                    LOGGER.warning('send stream')
                     current_frametime = stream.event_time
                     current_time = aktime.get_msec()
 
@@ -206,7 +209,8 @@ class CybosBacktestWorker(RpcBase):
                             stream.symbol,
                             stream.to_network()
                         )
-            await asyncio.sleep(1)
+            stream_data = await prefetch_task
+            await asyncio.sleep(0.1)
         self._is_streaming = False
         self._stream_pause = False
         self._stream_stop = False
