@@ -36,7 +36,7 @@ class CybosAccountWorker(RpcHandler):
         self.createOrder = self.on_create_order
         self.cancelOrder = self.on_cancel_order
         self.openOrder = self.on_open_order
-        self.discovery = self.on_get_info
+        self.discovery = self.on_discovery
         self._conn: AccountChannel = None
 
     def preload(self):
@@ -114,7 +114,7 @@ class CybosAccountWorker(RpcHandler):
         assert self._order
         return self._order.get_open_orders()
 
-    def on_get_info(self, **kwargs):
+    def on_discovery(self, **kwargs):
         LOGGER.info('')
         return {
             'market': MARKET,

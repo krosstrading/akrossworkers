@@ -259,7 +259,7 @@ class CybosOrder:
         return (self.cancel_obj.GetDibStatus(),
                 str(self.cancel_obj.GetDibMsg1()))
 
-    def order(self, code, quantity, price, is_buy):
+    def order(self, code: str, quantity: int, price: int, is_buy: bool):
         self.conn.wait_until_order_available()
         msg = f'ORDER Failed({code}) qty({quantity}) price({price}) ' \
               f'side({"buy" if is_buy else "sell"})'

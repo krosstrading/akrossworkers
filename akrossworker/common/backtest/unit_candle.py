@@ -132,7 +132,7 @@ class BacktestUnitCandle:
                 last_candle.add_base_asset_volume(candle.base_asset_volume)
                 last_candle.add_quote_asset_volume(candle.quote_asset_volume)
 
-    async def update_stream_data(self, stream: PriceStreamProtocol):
+    def update_stream_data(self, stream: PriceStreamProtocol):
         if not self.fetch_done:
             return
         elif not self._is_apply_extended() and stream.time_type != TickTimeType.Normal:
