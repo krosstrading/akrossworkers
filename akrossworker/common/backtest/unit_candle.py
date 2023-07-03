@@ -123,7 +123,9 @@ class BacktestUnitCandle:
                 self.add_new_by_candle(candle)
             elif last_candle.time_type != candle.time_type:
                 self.data.append(self.add_new_by_candle(candle, False))
-            elif last_candle.end_time >= candle.end_time:
+            elif (last_candle.end_time >= candle.end_time and
+                    last_candle.start_time <= candle.start_time):
+                #  잘못된 데이터가 들어오는 경우 대비 start_time 도 비교
                 last_candle.price_close = candle.price_close
                 if candle.price_high > last_candle.price_high:
                     last_candle.price_high = candle.price_high

@@ -41,7 +41,7 @@ class CybosBacktestWorker(RpcBase):
         self._timeFrame = None
         self._is_streaming = False
         self._stream_pause = False
-        self._stream_speed = 20.0
+        self._stream_speed = 2.0
         self._stream_stop = False
         self._symbols: Dict[str, SymbolInfo] = {}
         self._conn = QuoteChannel(MARKET_NAME)
@@ -168,7 +168,7 @@ class CybosBacktestWorker(RpcBase):
             prefetch_task = asyncio.create_task(
                 self._prefetch_stream(targets, self._timeFrame['current'], interval))
             current = self._timeFrame['current']
-            LOGGER.warning('current %s', datetime_str(current))
+            LOGGER.warning('current %s, total tick: %d', datetime_str(current), len(stream_data))
 
             self._timeFrame['current'] += interval
             if len(stream_data) > 0:
@@ -210,6 +210,7 @@ class CybosBacktestWorker(RpcBase):
                             stream.to_network()
                         )
             stream_data = await prefetch_task
+            LOGGER.warning('current %s, total tick: %d', datetime_str(current), len(stream_data))
             await asyncio.sleep(0.1)
         self._is_streaming = False
         self._stream_pause = False

@@ -81,7 +81,7 @@ class BacktestCandle:
 
     async def get_data(self, interval: str):
         interval, interval_type = aktime.interval_dissect(interval)
-        print(self.time_frame_candle is not None, self.time_frame_candle.get_interval_type(), interval_type)
+        # print(self.time_frame_candle is not None, self.time_frame_candle.get_interval_type(), interval_type)
         if (self.time_frame_candle is not None and
                 self.time_frame_candle.get_interval_type() == interval_type):
             return self.time_frame_candle.get_data(interval)
@@ -90,6 +90,7 @@ class BacktestCandle:
             self.candles[interval_type] = BacktestUnitCandle(
                 self.db, self.db_name, self.conn, self.market, self.symbol_info, interval_type, self.current_time)
             end_time = await self.candles[interval_type].fetch()
+            
             if self.time_frame_candle is None:  # realtime
                 pass  # push realtime data
             else:

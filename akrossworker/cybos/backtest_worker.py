@@ -66,7 +66,8 @@ class CybosBacktestWorker(RpcBase):
     
     async def on_create_backtest(self, **kwargs):
         # remove all datas existing
-        util.check_required_parameters(kwargs, 'backtest', 'targets', 'startTime', 'endTime', 'timeFrame')
+        util.check_required_parameters(
+            kwargs, 'backtest', 'targets', 'startTime', 'endTime', 'timeFrame')
         await self.on_finish_backtest()
         self._exchange = await self._conn.get_stream_exchange(kwargs['backtest'], auto_delete=False)
         self._timeFrame = {

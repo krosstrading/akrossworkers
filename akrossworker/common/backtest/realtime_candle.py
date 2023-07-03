@@ -49,8 +49,12 @@ class RealtimeCandle:
         return grouping.get_candle(
             self.data, self.interval_type, interval)
 
-    def get_data_until_now(self, _: int) -> List[PriceCandleProtocol]:
-        return self.data
+    def get_data_until_now(self, start_time: int) -> List[PriceCandleProtocol]:
+        result = []
+        for data in self.data:
+            if data.start_time > start_time:
+                result.append(data)
+        return result
 
     def _create_new_candle(self, stream: PriceStreamProtocol, is_same_type=True) -> PriceCandleProtocol:
         if is_same_type:
