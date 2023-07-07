@@ -88,7 +88,7 @@ class CybosOpenOrder:
                 # print('ORDER IN QUEUE ', type(order['is_buy']), order)
 
                 orders.append(OrderTradeEvent(
-                    self.market + '.' + order['code'],
+                    self.market + '.' + order['code'].lower(),
                     'BUY' if order['is_buy'] == '2' else 'SELL',
                     aktime.get_msec(),
                     OrderType.OrderLimit,  # TODO: change according to 21 flag

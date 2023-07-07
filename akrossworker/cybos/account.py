@@ -21,7 +21,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 MARKET = 'krx.spot'
-CYBOS_BASE_ASSET = 'KRW'
+CYBOS_BASE_ASSET = 'krw'
 
 
 class CybosAccountWorker(RpcHandler):

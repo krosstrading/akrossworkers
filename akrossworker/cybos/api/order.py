@@ -44,7 +44,7 @@ class _OrderRealtime:
         # total_quantity = self.obj.GetHeaderValue(23)    # count of stock left
         result = {
             'flag': flag,
-            'code': code,
+            'code': code.lower(),
             'order_number': order_num,
             'quantity': quantity,
             'price': price,
@@ -65,7 +65,7 @@ class OrderItem:
             is_buy: bool
     ):
         self.side = 'buy' if is_buy else 'sell'
-        self.code = code
+        self.code = code.lower()
         self.orig_qty = qty
         self.orig_price = price
         self.orig_order_id = -1
@@ -81,7 +81,7 @@ class OrderItem:
     def is_matched(self, trade_msg):
         side = 'buy' if trade_msg['order_type'] == '2' else 'sell'
         if (self.order_id == -1 and
-                self.code == trade_msg['code'] and
+                self.code == trade_msg['code'].lower() and
                 self.orig_qty == trade_msg['quantity'] and
                 self.orig_price == trade_msg['price'] and
                 self.side == side):
@@ -116,7 +116,7 @@ class CybosOrder:
     def add_open_order(self, open_order):
         # careful open_order number is string
         order_item = OrderItem(
-            open_order.symbol_id.split('.')[-1].upper(),
+            open_order.symbol_id.split('.')[-1].lower(),
             int(open_order.order_orig_qty),
             int(open_order.order_orig_price),
             int(open_order.trade_cum_qty),
@@ -202,9 +202,11 @@ class CybosOrder:
                 self._order_container.remove(done_item)
         elif msg['flag'] == '2':
             # if we do not use modify order then only cancel will set flag '2'
+            done_item = None
             for order_item in self._order_container:
                 if order_item.order_id == msg['order_number']:
-                    self._order_container.remove(order_item)
+                    done_item = order_item
+                    # self._order_container.remove(order_item)
                     self.callback(OrderTradeEvent(
                         self.market + '.' + order_item.code,
                         order_item.side,
@@ -222,6 +224,8 @@ class CybosOrder:
                         '0', None).to_network()
                     )                    
                     break
+            if done_item is not None:
+                self._order_container.remove(done_item)
 
     def cancel_order(self, order_number, code):
         LOGGER.info('Cancel Order(%s) %s', code, str(order_number))
@@ -273,7 +277,7 @@ class CybosOrder:
                 self.obj.SetInputValue(0, order_type)
                 self.obj.SetInputValue(1, self.account_num)
                 self.obj.SetInputValue(2, self.account_type)
-                self.obj.SetInputValue(3, code)
+                self.obj.SetInputValue(3, code.upper())
                 self.obj.SetInputValue(4, quantity)
                 if price == 0:  # 시장가
                     self.obj.SetInputValue(8, '03')
@@ -284,7 +288,7 @@ class CybosOrder:
                 status, msg = self.obj.GetDibStatus(), self.obj.GetDibMsg1()
                 if status == 0:
                     self._order_container.append(
-                        OrderItem(code, quantity, price, 0, is_buy))
+                        OrderItem(code.lower(), quantity, price, 0, is_buy))
 
                 LOGGER.info("process order %s, %s", str(status), msg)
                 return status, msg

@@ -53,7 +53,7 @@ class CybosAsset:
                                      str(0),
                                      str(0),
                                      str(price),
-                                     self.market + '.' + code)
+                                     self.market + '.' + code.lower())
             
         return hold_list
 
@@ -70,7 +70,7 @@ class CybosAsset:
         long_codes = []
         for i in range(self.stock_obj.GetHeaderValue(7)):
             code = self.stock_obj.GetDataValue(12, i)
-            long_codes.append(code)
+            long_codes.append(code.lower())
 
         return long_codes
 
