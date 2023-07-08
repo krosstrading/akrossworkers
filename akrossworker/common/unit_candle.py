@@ -43,9 +43,22 @@ class UnitCandle:
         self.data: List[PriceCandleProtocol] = []
         self.db_last_record = 0
 
-    def get_start_time(self, ms: int) -> int:
-        return aktime.get_start_time(
-            ms, self.interval_type, self.symbol_info.tz)
+    def get_start_time(self, ms: int, type_change: bool = False) -> int:
+        start_time = aktime.get_start_time(ms, self.interval_type, self.symbol_info.tz)
+        """
+        time type 이 09:00:30 초까지 장전 tick으로 나오고,
+        이후 09:00:30 초에 동일하게 장중 tick 으로 나올시
+        분봉의 경우 start_time 이 09:00 으로 동일하게 나오는 문제(lightweight chart error 발생)
+        type change 되는 경우 발생한 시간으로 start time을 변경하고, 
+        ms + 1 의 경우 09:00:00 초에 장전과 장중 동시에 발생하는 경우,
+        겹치게 되는 문제 해결을 위해 +1 추가
+        """
+        if type_change:
+            if start_time == ms:
+                return ms + 1
+            else:
+                return ms
+        return start_time
 
     def get_end_time(self, start_time: int) -> int:
         return aktime.get_end_time(start_time, self.interval_type, self.symbol_info.tz)
@@ -99,9 +112,10 @@ class UnitCandle:
                 if candle.start_time <= self.db_last_record:
                     LOGGER.warning('skip data')
                     continue
-                elif candle.end_time < now and await self.db.connected():
-                    await self.db.insert_one(self.db_name, col, candle.to_database())
-                    self.db_last_record = candle.end_time
+                # db 에 넣는 거 다시 고려
+                # elif candle.end_time < now and await self.db.connected():
+                #     await self.db.insert_one(self.db_name, col, candle.to_database())
+                #     self.db_last_record = candle.end_time
                     # LOGGER.info('%s db insert %s',
                     #             col,
                     #             datetime.fromtimestamp(int(candle.end_time / 1000)))
@@ -111,9 +125,9 @@ class UnitCandle:
                          self.symbol_info.symbol, self.interval_type)
         self.fetch_done = True
 
-    async def add_new_candle(self, s: PriceStreamProtocol):
-        col = self.symbol_info.symbol.lower() + '_1' + self.interval_type
-        start_time = self.get_start_time(s.event_time)
+    async def add_new_candle(self, s: PriceStreamProtocol, type_change: bool = False):
+        # col = self.symbol_info.symbol.lower() + '_1' + self.interval_type
+        start_time = self.get_start_time(s.event_time, type_change)
         end_time = self.get_end_time(start_time)
 
         self.data.append(PriceCandleProtocol.CreatePriceCandle(
@@ -126,13 +140,14 @@ class UnitCandle:
         if len(self.data) > self.get_limit_count():
             self.data = self.data[-self.get_limit_count():]
 
-        if len(self.data) > 1 and self.data[-2].end_time > self.db_last_record:
-            self.db_last_record = self.data[-2].end_time
-            await self.db.insert_one(self.db_name, col, self.data[-2].to_database())
-            LOGGER.info('%s db new candle insert (candle last:%s), (db last:%s)',
-                        col,
-                        datetime.fromtimestamp(int(self.data[-2].end_time / 1000)),
-                        datetime.fromtimestamp(int(self.db_last_record / 1000)))
+        # DB 에 넣는 거는 향후 고려
+        # if len(self.data) > 1 and self.data[-2].end_time > self.db_last_record:
+        #     self.db_last_record = self.data[-2].end_time
+        #     await self.db.insert_one(self.db_name, col, self.data[-2].to_database())
+        #     LOGGER.info('%s db new candle insert (candle last:%s), (db last:%s)',
+        #                 col,
+        #                 datetime.fromtimestamp(int(self.data[-2].end_time / 1000)),
+        #                 datetime.fromtimestamp(int(self.db_last_record / 1000)))
 
     def _is_apply_extended(self):
         if self.interval_type == 'm' or self.interval_type == 'h':
@@ -144,30 +159,24 @@ class UnitCandle:
             return
 
         s = PriceStreamProtocol.ParseNetwork(stream)
-        as_new = False
         if not self._is_apply_extended() and s.time_type != TickTimeType.Normal:
             return
-
-        if len(self.data) > 0:
-            last_time_type = self.data[-1].time_type
-            if s.time_type != last_time_type:
-                as_new = True
-        else:
-            as_new = True
-
-        if as_new:
+        elif len(self.data) == 0:
             self.add_new_candle(s)
         else:
             last_candle = self.data[-1]
-            if last_candle.end_time >= s.event_time:
-                last_candle.price_close = s.price
-                if float(s.price) > last_candle.price_high:
-                    last_candle.price_high = s.price
-                if float(s.price) < last_candle.price_low:
-                    last_candle.price_low = s.price
-                last_candle.add_base_asset_volume(s.volume)
-                last_candle.add_quote_asset_volume(float(s.volume) * float(s.price))
-            elif s.event_time < last_candle.start_time:
-                LOGGER.warning('stream time is past')
-            else:
+            if s.event_time > last_candle.end_time:
                 self.add_new_candle(s)
+            elif s.event_time >= last_candle.start_time and s.event_time <= last_candle.end_time:
+                if s.time_type != last_candle.time_type:
+                    self.add_new_candle(s, True)
+                else:
+                    last_candle.price_close = s.price
+                    if float(s.price) > last_candle.price_high:
+                        last_candle.price_high = s.price
+                    if float(s.price) < last_candle.price_low:
+                        last_candle.price_low = s.price
+                    last_candle.add_base_asset_volume(s.volume)
+                    last_candle.add_quote_asset_volume(float(s.volume) * float(s.price))
+            else:
+                pass  # stream time is past
