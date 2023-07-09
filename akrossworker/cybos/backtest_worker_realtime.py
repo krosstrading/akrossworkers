@@ -41,7 +41,7 @@ class CybosBacktestWorker(RpcBase):
         self._timeFrame = None
         self._is_streaming = False
         self._stream_pause = False
-        self._stream_speed = 10.0
+        self._stream_speed = 20
         self._stream_stop = False
         self._symbols: Dict[str, SymbolInfo] = {}
         self._conn = QuoteChannel(MARKET_NAME)

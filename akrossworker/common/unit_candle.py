@@ -43,7 +43,7 @@ class UnitCandle:
         self.data: List[PriceCandleProtocol] = []
         self.db_last_record = 0
 
-    def get_start_time(self, ms: int, type_change: bool = False) -> int:
+    def get_start_time(self, ms: int, last_start: int) -> int:
         start_time = aktime.get_start_time(ms, self.interval_type, self.symbol_info.tz)
         """
         time type 이 09:00:30 초까지 장전 tick으로 나오고,
@@ -53,11 +53,8 @@ class UnitCandle:
         ms + 1 의 경우 09:00:00 초에 장전과 장중 동시에 발생하는 경우,
         겹치게 되는 문제 해결을 위해 +1 추가
         """
-        if type_change:
-            if start_time == ms:
-                return ms + 1
-            else:
-                return ms
+        if last_start > 0 and last_start == start_time:
+            start_time += 1
         return start_time
 
     def get_end_time(self, start_time: int) -> int:
@@ -125,9 +122,9 @@ class UnitCandle:
                          self.symbol_info.symbol, self.interval_type)
         self.fetch_done = True
 
-    async def add_new_candle(self, s: PriceStreamProtocol, type_change: bool = False):
+    async def add_new_candle(self, s: PriceStreamProtocol, last_start: int = 0):
         # col = self.symbol_info.symbol.lower() + '_1' + self.interval_type
-        start_time = self.get_start_time(s.event_time, type_change)
+        start_time = self.get_start_time(s.event_time, last_start)
         end_time = self.get_end_time(start_time)
 
         self.data.append(PriceCandleProtocol.CreatePriceCandle(
@@ -169,7 +166,7 @@ class UnitCandle:
                 self.add_new_candle(s)
             elif s.event_time >= last_candle.start_time and s.event_time <= last_candle.end_time:
                 if s.time_type != last_candle.time_type:
-                    self.add_new_candle(s, True)
+                    self.add_new_candle(s, last_candle.start_time)
                 else:
                     last_candle.price_close = s.price
                     if float(s.price) > last_candle.price_high:

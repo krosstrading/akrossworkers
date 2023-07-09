@@ -49,7 +49,7 @@ class CybosRestCache(RpcBase):
         await self.regist_symbols()
 
     async def regist_symbols(self) -> None:
-        ret, symbols = await self._conn.api_call(
+        _, symbols = await self._conn.api_call(
             self._worker, ApiCommand.SymbolInfo, cache=False)
         if not isinstance(symbols, list) or len(symbols) == 0:
             LOGGER.error('no symbols')
@@ -64,7 +64,11 @@ class CybosRestCache(RpcBase):
                     CybosCandleCache(
                         self._db, DBEnum.KRX_QUOTE_DB,
                         self._conn, self._worker, symbol_info)
-                # await self._symbols[symbol_name].run()
+                
+        candidate_symbols = await self.on_krx_rank_symbols(searchDate=aktime.get_msec())
+        LOGGER.warning('today cache candle count %d', len(candidate_symbols))
+        for symbol_info in candidate_symbols:
+            await self._symbols[symbol_info['symbol'].lower()].run()
 
     async def on_orderbook(self, **kwargs):
         util.check_required_parameters(kwargs, 'symbol')
