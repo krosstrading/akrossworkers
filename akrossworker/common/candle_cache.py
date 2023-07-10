@@ -68,7 +68,7 @@ class CandleCache:
 
     async def on_price_stream(self, msg):
         for candle in self.candles.values():
-            candle.update_stream_data(msg)
+            await candle.update_stream_data(msg)
 
     async def run(self):
         # read from database

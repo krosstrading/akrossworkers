@@ -151,7 +151,7 @@ class UnitCandle:
             return True
         return False
 
-    def update_stream_data(self, stream: list):
+    async def update_stream_data(self, stream: list):
         if not self.fetch_done:
             return
 
@@ -159,14 +159,14 @@ class UnitCandle:
         if not self._is_apply_extended() and s.time_type != TickTimeType.Normal:
             return
         elif len(self.data) == 0:
-            self.add_new_candle(s)
+            await self.add_new_candle(s)
         else:
             last_candle = self.data[-1]
             if s.event_time > last_candle.end_time:
-                self.add_new_candle(s)
+                await self.add_new_candle(s)
             elif s.event_time >= last_candle.start_time and s.event_time <= last_candle.end_time:
                 if s.time_type != last_candle.time_type:
-                    self.add_new_candle(s, last_candle.start_time)
+                    await self.add_new_candle(s, last_candle.start_time)
                 else:
                     last_candle.price_close = s.price
                     if float(s.price) > last_candle.price_high:
