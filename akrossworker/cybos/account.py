@@ -63,6 +63,7 @@ class CybosAccountWorker(RpcHandler):
         self._conn.run_bus(self)
 
     def _event_callback(self, msg):
+        LOGGER.warning('%s', msg)
         self._order.order_event(msg)
 
     def on_order_event(self, data):

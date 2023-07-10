@@ -82,6 +82,7 @@ class CybosAccountSubscribe:
         self.realtime_order.Subscribe()
 
     def order_event(self, msg):
+        LOGGER.warning('order event %s', msg)
         self._conn.send_event(msg)
 
 
