@@ -56,15 +56,20 @@ class CybosAccountWorker(RpcHandler):
             self._order.add_open_order(open_order)
         self._conn = AccountChannel(
             MARKET,
-            self._account.get_account_number()
+            self._account.get_account_number(),
+            self._event_callback
         )
         self._conn.connect()
         self._conn.run_bus(self)
-        self._order.start_subscribe()
+
+    def _event_callback(self, msg):
+        self._order.order_event(msg)
 
     def on_order_event(self, data):
+        LOGGER.warning('')
         self._conn.send_event(AccountApiCommand.OrderEvent, data)
         self._conn.send_event(AccountApiCommand.AssetEvent, self._get_hold_asset())
+        LOGGER.warning('done')
 
     def _get_hold_asset(self):
         assert self._asset is not None
@@ -75,9 +80,11 @@ class CybosAccountWorker(RpcHandler):
         hold_list.add_hold_asset(
             'KRW', '원화',
             str(krw), '0', '0', '0', '0', '0', '')
+        LOGGER.warning('hold asset %s', hold_list.to_array())
         return hold_list.to_array()
 
     def on_asset_list(self, **kwargs):
+        LOGGER.warning('')
         return self._get_hold_asset()
 
     def on_create_order(self, **kwargs):

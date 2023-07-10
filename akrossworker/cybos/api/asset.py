@@ -25,7 +25,7 @@ class CybosAsset:
         self.stock_obj.BlockRequest()
         return self.stock_obj.GetHeaderValue(7)
 
-    def get_long_list(self):
+    def get_long_list(self) -> HoldAssetList:
         conn = CybosConnection()
         conn.wait_until_available()
 
@@ -35,6 +35,12 @@ class CybosAsset:
         self.stock_obj.SetInputValue(2, 50)
         self.stock_obj.BlockRequest()
         hold_list = HoldAssetList()
+        
+        if type(self.stock_obj.GetHeaderValue(7)) != int:
+            LOGGER.warning('long list count is not integer')
+            return hold_list
+
+        LOGGER.warning('long list count %d', self.stock_obj.GetHeaderValue(7))
         for i in range(self.stock_obj.GetHeaderValue(7)):
             code = self.stock_obj.GetDataValue(12, i)
             name = self.stock_obj.GetDataValue(0, i)
@@ -54,7 +60,7 @@ class CybosAsset:
                                      str(0),
                                      str(price),
                                      self.market + '.' + code.lower())
-            
+        LOGGER.warning('get long list done') 
         return hold_list
 
     def get_long_codes(self):

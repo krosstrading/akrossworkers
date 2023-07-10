@@ -107,10 +107,10 @@ class CybosOrder:
         self.market = market
         self.callback = callback
         self.conn = CybosConnection()
-        self.realtime_order = com_obj.get_com_obj('DsCbo1.CpConclusion')
+        # self.realtime_order = com_obj.get_com_obj('DsCbo1.CpConclusion')
         self.cancel_obj = com_obj.get_com_obj('CpTrade.CpTd0314')
-        self.handler = com_obj.with_events(self.realtime_order, _OrderRealtime)
-        self.handler.set_params(self.realtime_order, self.order_event)
+        # self.handler = com_obj.with_events(self.realtime_order, _OrderRealtime)
+        # self.handler.set_params(self.realtime_order, self.order_event)
         self._order_container = []
 
     def add_open_order(self, open_order):
@@ -297,14 +297,14 @@ class CybosOrder:
                 LOGGER.error('order process failed %s', str(e))
         return -1, msg
 
-    def start_subscribe(self):
-        if not self.started:
-            self.started = True
-            self.realtime_order.Subscribe()
-            LOGGER.warning('START ORDER SUBSCRIBE')
+    # def start_subscribe(self):
+    #     if not self.started:
+    #         self.started = True
+    #         self.realtime_order.Subscribe()
+    #         LOGGER.warning('START ORDER SUBSCRIBE')
 
-    def stop_subscribe(self):
-        if self.started:
-            self.started = False
-            self.realtime_order.Unsubscribe()
-            LOGGER.warning('STOP ORDER SUBSCRIBE')
+    # def stop_subscribe(self):
+    #     if self.started:
+    #         self.started = False
+    #         self.realtime_order.Unsubscribe()
+    #         LOGGER.warning('STOP ORDER SUBSCRIBE')
