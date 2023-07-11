@@ -1,5 +1,5 @@
 import logging
-from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtCore import QCoreApplication, QMutex, QMutexLocker
 
 from akross.connection.pika_qt.account_channel import AccountChannel
 from akross.connection.pika_qt.rpc_handler import RpcHandler
@@ -32,6 +32,7 @@ class CybosAccountWorker(RpcHandler):
         self._open_order: CybosOpenOrder = None
         self._order: CybosOrder = None
         self._market = MARKET
+        self._mutex = QMutex()
         self.assetList = self.on_asset_list
         self.createOrder = self.on_create_order
         self.cancelOrder = self.on_cancel_order
@@ -54,6 +55,7 @@ class CybosAccountWorker(RpcHandler):
         open_orders = self._open_order.request()
         for open_order in open_orders:
             self._order.add_open_order(open_order)
+        
         self._conn = AccountChannel(
             MARKET,
             self._account.get_account_number(),
@@ -67,14 +69,14 @@ class CybosAccountWorker(RpcHandler):
         self._order.order_event(msg)
 
     def on_order_event(self, data):
-        LOGGER.warning('')
-        self._conn.send_event(AccountApiCommand.OrderEvent, data)
-        self._conn.send_event(AccountApiCommand.AssetEvent, self._get_hold_asset())
+        LOGGER.warning('enter')
+        with QMutexLocker(self._mutex):
+            self._conn.send_event(AccountApiCommand.OrderEvent, data)
+            self._conn.send_event(AccountApiCommand.AssetEvent, self._get_hold_asset())
         LOGGER.warning('done')
 
     def _get_hold_asset(self):
-        assert self._asset is not None
-        assert self._account is not None
+        LOGGER.warning('')
         hold_list = self._asset.get_long_list()
         krw = balance.get_balance(self._account.get_account_number(),
                                   self._account.get_account_type())
@@ -89,7 +91,6 @@ class CybosAccountWorker(RpcHandler):
         return self._get_hold_asset()
 
     def on_create_order(self, **kwargs):
-        assert self._order is not None
         util.check_required_parameters(
             kwargs,
             'symbol',

@@ -58,7 +58,7 @@ class _OrderRealtime:
             'order_type': order_type,
             # 'total_quantity': total_quantity
         }
-        LOGGER.info('OnReceived %s', result)
+        # LOGGER.info('OnReceived %s', result)
         self.callback(result.copy())
 
 

@@ -1,5 +1,6 @@
 import time
 import logging
+from typing import List
 from akross.common import aktime
 from akross.common.exception import CommunicationError
 from akrossworker.common.args_constants import OrderResultType, OrderType
@@ -80,7 +81,7 @@ class OrderItem:
 
     def is_matched(self, trade_msg):
         side = 'buy' if trade_msg['order_type'] == '2' else 'sell'
-        if (self.order_id == -1 and
+        if (self.order_id == -1 and  # 신규 주문이고, 아직 order id 받지 못한 상태
                 self.code == trade_msg['code'].lower() and
                 self.orig_qty == trade_msg['quantity'] and
                 self.orig_price == trade_msg['price'] and
@@ -111,7 +112,7 @@ class CybosOrder:
         self.cancel_obj = com_obj.get_com_obj('CpTrade.CpTd0314')
         # self.handler = com_obj.with_events(self.realtime_order, _OrderRealtime)
         # self.handler.set_params(self.realtime_order, self.order_event)
-        self._order_container = []
+        self._order_container: List[OrderItem] = []
 
     def add_open_order(self, open_order):
         # careful open_order number is string
