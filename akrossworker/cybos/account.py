@@ -86,8 +86,7 @@ class CybosAccountWorker(RpcHandler):
                                  self._account.get_account_type())
         self._asset_manager.add_intial_asset(self._asset.get_long_list())
 
-        self._order = CybosOrder(self._market,
-                                 self._account.get_account_number(),
+        self._order = CybosOrder(self._account.get_account_number(),
                                  self._account.get_account_type(),
                                  self._asset_manager)
 
