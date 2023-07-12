@@ -51,7 +51,7 @@ class CybosAsset:
                 'code: %s, name: %s, quantity: %d, '
                 'sell_available: %d, price: %d',
                 code, name, quantity, sell_available, price)
-            hold_list.add_hold_asset(code,
+            hold_list.add_hold_asset(code.lower(),
                                      name,
                                      str(sell_available),
                                      str(0),

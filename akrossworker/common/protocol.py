@@ -839,3 +839,35 @@ class OrderResponse:
         price, qty, status
     ):
         return OrderResponse(symbol, side, price, qty, status)
+
+
+class CybosTradeEvent:
+    Unknown = 0
+    Trade = 1
+    Confirm = 2
+    Denied = 3
+    Submit = 4
+
+    def __init__(
+        self,
+        flag: str,
+        symbol: str,
+        order_num: int,
+        qty: int,
+        price: int,
+        order_type: str
+    ):
+        self.status = CybosTradeEvent.Unknown
+        if flag == '4':
+            self.status = CybosTradeEvent.Submit
+        elif flag == '1':
+            self.status = CybosTradeEvent.Trade
+        elif flag == '2':
+            self.status = CybosTradeEvent.Confirm
+        elif flag == '3':
+            self.status = CybosTradeEvent.Denied
+        self.symbol = symbol.lower()
+        self.order_num = order_num
+        self.qty = qty
+        self.price = price
+        self.is_buy = True if order_type == '2' else False

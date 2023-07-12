@@ -2,17 +2,7 @@ import logging
 from PyQt5.QtCore import QCoreApplication
 
 from akross.connection.pika_qt.account_subscribe_channel import AccountSubscribeChannel
-from akross.common import util
-from akross.common.exception import CommunicationError
-
-from akrossworker.common.args_constants import OrderResultType
-from akrossworker.common.command import AccountApiCommand
-from akrossworker.common.protocol import OrderResponse
 from akrossworker.cybos.api.account import CybosAccount
-from akrossworker.cybos.api.asset import CybosAsset
-from akrossworker.cybos.api.open_order import CybosOpenOrder
-from akrossworker.cybos.api import balance
-from akrossworker.cybos.api.order import CybosOrder
 from akrossworker.cybos.api.connection import CybosConnection
 from akrossworker.cybos.api import com_obj
 
@@ -63,6 +53,9 @@ class _OrderRealtime:
 
 
 class CybosAccountSubscribe:
+    """
+    deprecated
+    """
     def __init__(self):
         self.realtime_order = com_obj.get_com_obj('DsCbo1.CpConclusion')
         self.handler = com_obj.with_events(self.realtime_order, _OrderRealtime)

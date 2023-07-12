@@ -72,11 +72,11 @@ class CybosOpenOrder:
                 order['quantity'] = obj.GetDataValue(6, i)
                 order['price'] = obj.GetDataValue(7, i)
                 # 체결수량
-                order['traded_quantity'] = obj.GetDataValue(8, i) 
+                order['traded_quantity'] = obj.GetDataValue(8, i)
                 # 신용구분
-                order['credit_type'] = obj.GetDataValue(9, i) 
+                order['credit_type'] = obj.GetDataValue(9, i)
                 # 정정취소 가능수량
-                order['edit_available_quantity'] = obj.GetDataValue(11, i)  
+                order['edit_available_quantity'] = obj.GetDataValue(11, i)
                 # 매매구분코드, '1' == 매도, '2' == 매수, int return 아님
                 order['is_buy'] = obj.GetDataValue(13, i)
                 # 대출일
@@ -96,7 +96,7 @@ class CybosOpenOrder:
                      else OrderResultType.Trade),
                     (OrderResultType.SubTypeNew if order['traded_quantity'] == 0
                      else OrderResultType.SubTypePartial),
-                    order['number'],
+                    int(order['number']),
                     str(order['quantity']),
                     str(order['price']),
                     '0',

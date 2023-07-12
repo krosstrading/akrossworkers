@@ -1,16 +1,20 @@
 import logging
-from PyQt5.QtCore import QCoreApplication, QMutex, QMutexLocker
+from typing import Dict
+from PyQt5.QtCore import QCoreApplication
 
+from akross.common import aktime
 from akross.connection.pika_qt.account_channel import AccountChannel
 from akross.connection.pika_qt.rpc_handler import RpcHandler
 from akross.common import util
 from akross.common.exception import CommunicationError
 
-from akrossworker.common.args_constants import OrderResultType
+from akrossworker.cybos.api import stock_code
+from akrossworker.common.args_constants import OrderResultType, TradingStatus
 from akrossworker.common.command import AccountApiCommand
-from akrossworker.common.protocol import OrderResponse
+from akrossworker.common.protocol import OrderResponse, SymbolInfo
 from akrossworker.cybos.api.account import CybosAccount
 from akrossworker.cybos.api.asset import CybosAsset
+from akrossworker.cybos.api.asset_manager import AssetManager
 from akrossworker.cybos.api.open_order import CybosOpenOrder
 from akrossworker.cybos.api import balance
 from akrossworker.cybos.api.order import CybosOrder
@@ -32,30 +36,61 @@ class CybosAccountWorker(RpcHandler):
         self._open_order: CybosOpenOrder = None
         self._order: CybosOrder = None
         self._market = MARKET
-        self._mutex = QMutex()
         self.assetList = self.on_asset_list
         self.createOrder = self.on_create_order
         self.cancelOrder = self.on_cancel_order
         self.openOrder = self.on_open_order
         self.discovery = self.on_discovery
         self._conn: AccountChannel = None
+        self._asset_manager: AssetManager = None
+        self._symbol_dict: Dict[str, SymbolInfo] = {}
+
+    def _create_symbol_info(self):
+        type_name = ['kospi', 'kosdaq']
+        call_func = [
+            stock_code.get_kospi_company_code_list,
+            stock_code.get_kosdaq_company_code_list
+        ]
+        for i, sector in enumerate(type_name):
+            code_list = call_func[i]()
+            market_caps = stock_code.get_marketcaps(code_list)
+            for code in code_list:
+                listed = aktime.intdate_to_msec(
+                    stock_code.get_stock_listed_date(code), 'KRX')
+                symbol_info = SymbolInfo(
+                    MARKET, code.lower(), ['stock', sector],
+                    (TradingStatus.Trading if not stock_code.is_stopped(code) else TradingStatus.Stop),
+                    stock_code.code_to_name(code), code, CYBOS_BASE_ASSET, 0, 0,
+                    ['0', '0', '0'], ['1', '0', '1'], '1',
+                    market_caps[code][0] if code in market_caps else '0',
+                    market_caps[code][1] if code in market_caps else '0',
+                    listed, "Asia/Seoul", 0
+                )
+                self._symbol_dict[code.lower()] = symbol_info
 
     def preload(self):
+        self._create_symbol_info()
         self._account = CybosAccount()
-        self._asset = CybosAsset(self._market,
-                                 self._account.get_account_number(),
-                                 self._account.get_account_type())
+        free_balance = balance.get_balance(
+            self._account.get_account_number(), self._account.get_account_type())
+        
         self._open_order = CybosOpenOrder(self._account.get_account_number(),
                                           self._account.get_account_type(),
                                           self._market)
+        open_orders = self._open_order.request()
+        self._asset_manager = AssetManager(
+            free_balance, open_orders, self._symbol_dict, self.on_report_event)
+
+        self._asset = CybosAsset(self._market,
+                                 self._account.get_account_number(),
+                                 self._account.get_account_type())
+        self._asset_manager.add_intial_asset(self._asset.get_long_list())
+
         self._order = CybosOrder(self._market,
                                  self._account.get_account_number(),
                                  self._account.get_account_type(),
-                                 self.on_order_event)
-        open_orders = self._open_order.request()
-        for open_order in open_orders:
-            self._order.add_open_order(open_order)
-        
+                                 self._asset_manager)
+
         self._conn = AccountChannel(
             MARKET,
             self._account.get_account_number(),
@@ -63,32 +98,19 @@ class CybosAccountWorker(RpcHandler):
         )
         self._conn.connect()
         self._conn.run_bus(self)
+        self._order.start_subscribe()
 
     def _event_callback(self, msg):
-        LOGGER.warning('%s', msg)
-        self._order.order_event(msg)
+        pass  # deprecated
 
-    def on_order_event(self, data):
-        LOGGER.warning('enter')
-        with QMutexLocker(self._mutex):
-            self._conn.send_event(AccountApiCommand.OrderEvent, data)
-            self._conn.send_event(AccountApiCommand.AssetEvent, self._get_hold_asset())
-        LOGGER.warning('done')
-
-    def _get_hold_asset(self):
-        LOGGER.warning('')
-        hold_list = self._asset.get_long_list()
-        krw = balance.get_balance(self._account.get_account_number(),
-                                  self._account.get_account_type())
-        hold_list.add_hold_asset(
-            'KRW', '원화',
-            str(krw), '0', '0', '0', '0', '0', '')
-        LOGGER.warning('hold asset %s', hold_list.to_array())
-        return hold_list.to_array()
+    def on_report_event(self, msg):
+        self._conn.send_event(AccountApiCommand.OrderEvent, msg)
+        self._conn.send_event(AccountApiCommand.AssetEvent, self._asset_manager.get_hold_assets())
+        # client will handle open orders, not sending open order event separately
 
     def on_asset_list(self, **kwargs):
         LOGGER.warning('')
-        return self._get_hold_asset()
+        return self._asset_manager.get_hold_assets()
 
     def on_create_order(self, **kwargs):
         util.check_required_parameters(
@@ -120,8 +142,8 @@ class CybosAccountWorker(RpcHandler):
         return msg
 
     def on_open_order(self, **kwargs):
-        assert self._order
-        return self._order.get_open_orders()
+        LOGGER.warning('')
+        return self._asset_manager.get_open_orders()
 
     def on_discovery(self, **kwargs):
         LOGGER.info('')
