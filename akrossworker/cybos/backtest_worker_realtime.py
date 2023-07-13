@@ -34,14 +34,14 @@ class CybosBacktestWorker(RpcBase):
         self.finishBacktest = self.on_finish_backtest
         self.play = self.on_play
         self.next = self.on_next
-        self.speed = self.on_speed
+        self.setSpeed = self.on_set_speed
         self.pause = self.on_pause
 
         self._worker: Market = None
         self._timeFrame = None
         self._is_streaming = False
         self._stream_pause = False
-        self._stream_speed = 20
+        self._stream_speed = 1
         self._stream_stop = False
         self._symbols: Dict[str, SymbolInfo] = {}
         self._conn = QuoteChannel(MARKET_NAME)
@@ -80,6 +80,7 @@ class CybosBacktestWorker(RpcBase):
         # remove all datas existing
         util.check_required_parameters(kwargs, 'backtest', 'startTime', 'endTime', 'targets')
         await self.on_finish_backtest()
+        self._stream_speed = 1
         self._exchange = await self._conn.get_stream_exchange(kwargs['backtest'], auto_delete=False)
         self._timeFrame = {
             'start': kwargs['startTime'],
@@ -105,10 +106,11 @@ class CybosBacktestWorker(RpcBase):
         return {}
 
     async def on_play(self, **kwargs):
-        if not self._is_streaming:
-            asyncio.create_task(self.start_stream())
-        elif self._is_streaming and self._stream_pause:
+        if self._is_streaming and self._stream_pause:
             self._stream_pause = False
+        elif not self._is_streaming:
+            asyncio.create_task(self.start_stream())
+        
         return {}
 
     async def on_pause(self, **kwargs):
@@ -116,8 +118,9 @@ class CybosBacktestWorker(RpcBase):
             self._stream_pause = True
         return {}
 
-    async def on_speed(self, **kwargs):
+    async def on_set_speed(self, **kwargs):
         util.check_required_parameters(kwargs, 'speed')
+        LOGGER.warning('change speed to %d', kwargs['speed'])
         self._stream_speed = float(kwargs['speed'])
         return {}
 
