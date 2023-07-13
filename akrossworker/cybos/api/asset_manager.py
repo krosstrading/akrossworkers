@@ -41,7 +41,7 @@ class OrderItem:
 
     def get_cancel_amount(self):
         if self.is_buy:
-            return self.price * (self.get_remained_qty())
+            return self.orig_price * (self.get_remained_qty())
         return 0
     
     def get_remained_qty(self):
@@ -185,7 +185,8 @@ class AssetManager:
 
     def add_new_order(self, symbol: str, is_buy: bool, price: int, qty: int):
         if is_buy:  # 편의 위해 매수시에는 세금 추가하지 않음
-            self.lock_balance(price * qty)
+            if price > 0:  # 시장가 매수, test case 필요
+                self.lock_balance(price * qty)
         else:
             self.lock_asset(symbol, qty)
         
@@ -229,6 +230,7 @@ class AssetManager:
             if order_item.order_id == event.order_num:
                 done_item = order_item
                 if order_item.is_buy:
+                    print('add balance', order_item.get_cancel_amount())
                     self.add_balance(order_item.get_cancel_amount(), True)
                 else:
                     self.move_lock_asset_to_free(event.symbol, order_item.get_remained_qty())
@@ -261,7 +263,15 @@ class AssetManager:
     def subtract_lock_balance(self, amount: int):
         # 매수 후 매수 되었을 경우
         locked = int(self.assets[KRW].locked)
-        self.assets[KRW].locked = str(locked - amount)
+        free = int(self.assets[KRW].free)
+        if locked < amount:  # 시장가 매수 한 경우, locked 되어 있지 않음
+            if free >= amount:
+                self.assets[KRW].free = str(free - amount)
+            else:
+                LOGGER.warning('cannot be subtracted free(%d), locked(%d), amount(%d)',
+                               free, locked, amount)
+        else:
+            self.assets[KRW].locked = str(locked - amount)
 
     def add_balance(self, amount: int, is_cancel: bool):
         free = int(self.assets[KRW].free)
@@ -300,6 +310,8 @@ class AssetManager:
         if symbol.lower() in self.assets:
             asset = self.assets[symbol.lower()]
             asset.locked = str(int(asset.locked) - qty)
+            if int(asset.locked) == 0 and int(asset.free) == 0:
+                del self.assets[symbol.lower()]
 
     def move_lock_asset_to_free(self, symbol: str, qty: int):
         if symbol.lower() in self.assets:
