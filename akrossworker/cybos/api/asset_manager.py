@@ -35,6 +35,7 @@ class OrderItem:
         self.orig_price = price
         self.orig_order_id = -1
         self.order_id = order_id
+        self.order_type = OrderType.OrderMarket if price == 0 else OrderType.OrderLimit
         self.price = 0
         self.qty = 0
         self.trade_cum_qty = trade_cum_qty
@@ -44,13 +45,16 @@ class OrderItem:
             return self.orig_price * (self.get_remained_qty())
         return 0
     
+    def is_market_price(self):
+        return self.order_type == OrderType.OrderMarket
+
     def get_remained_qty(self):
         return self.orig_qty - self.trade_cum_qty
 
     def get_new_report(self) -> OrderTradeEvent:
         return OrderTradeEvent(
             self.symbol_id, self.side, aktime.get_msec(),
-            OrderType.OrderLimit, OrderResultType.New, OrderResultType.SubTypeNew,
+            self.order_type, OrderResultType.New, OrderResultType.SubTypeNew,
             self.order_id, str(self.orig_qty), str(self.orig_price),
             '0', '0', '0', '0', None
         )
@@ -60,7 +64,7 @@ class OrderItem:
         if self.get_remained_qty() > 0 and self.orig_order_id == -1:
             return OrderTradeEvent(
                 self.symbol_id, self.side, aktime.get_msec(),
-                OrderType.OrderLimit,
+                self.order_type,
                 OrderResultType.New if self.trade_cum_qty == 0 else OrderResultType.Trade,
                 OrderResultType.SubTypeNew if self.trade_cum_qty == 0 else OrderResultType.SubTypePartial,
                 self.order_id, str(self.orig_qty), str(self.orig_price),
@@ -71,7 +75,7 @@ class OrderItem:
     def get_trade_report(self, subtype: str) -> OrderTradeEvent:
         return OrderTradeEvent(
             self.symbol_id, self.side, aktime.get_msec(),
-            OrderType.OrderLimit, OrderResultType.Trade, subtype,
+            self.order_type, OrderResultType.Trade, subtype,
             self.order_id, str(self.orig_qty), str(self.orig_price),
             str(self.qty), str(self.trade_cum_qty), str(self.price), '0', None
         )
@@ -80,7 +84,7 @@ class OrderItem:
         # client 에서는 이전 order id 를 가지고 있기 때문에, orig_order_id 전달
         return OrderTradeEvent(
             self.symbol_id, self.side, aktime.get_msec(),
-            OrderType.OrderLimit, OrderResultType.Canceled, OrderResultType.Canceled,
+            self.order_type, OrderResultType.Canceled, OrderResultType.Canceled,
             self.orig_order_id, str(self.orig_qty), str(self.orig_price),
             '0', str(self.trade_cum_qty), str(self.price), '0', None
         )
@@ -215,12 +219,26 @@ class AssetManager:
 
     def handle_trade_event(self, event: CybosTradeEvent):
         done_item = None
+        item = None
         for order_item in self.open_orders:
             result = order_item.set_traded(event)
             if result != IGNORE:
                 self.callback(order_item.get_trade_report(result).to_network())
+                item = order_item
                 done_item = order_item if result == OrderResultType.SubTypeFilled else None
                 break
+
+        if event.is_buy:
+            if item is None or (item is not None and item.is_market_price()):
+                # item is None: 외부에서 매수
+                self.subtract_free_balance(int(event.price) * int(event.qty))
+            else:
+                self.subtract_lock_balance(int(event.price) * int(event.qty))
+            self.add_asset(event.symbol, int(event.price), int(event.qty))
+        else:
+            self.add_balance(int(event.price) * int(event.qty), False)
+            self.subtract_lock_asset(event.symbol, int(event.qty))
+
         if done_item is not None:
             self.open_orders.remove(done_item)
 
@@ -230,7 +248,7 @@ class AssetManager:
             if order_item.order_id == event.order_num:
                 done_item = order_item
                 if order_item.is_buy:
-                    print('add balance', order_item.get_cancel_amount())
+                    # print('add balance', order_item.get_cancel_amount())
                     self.add_balance(order_item.get_cancel_amount(), True)
                 else:
                     self.move_lock_asset_to_free(event.symbol, order_item.get_remained_qty())
@@ -243,13 +261,6 @@ class AssetManager:
         if event.status == CybosTradeEvent.Submit:
             self.handle_new_order_event(event)
         elif event.status == CybosTradeEvent.Trade:
-            if event.is_buy:
-                self.subtract_lock_balance(int(event.price) * int(event.qty))
-                self.add_asset(event.symbol, int(event.price), int(event.qty))
-            else:
-                self.add_balance(int(event.price) * int(event.qty), False)
-                self.subtract_lock_asset(event.symbol, int(event.qty))
-
             self.handle_trade_event(event)
         elif event.status == CybosTradeEvent.Confirm:  # 취소, 정정에만 사용
             self.handle_cancel_event(event)
@@ -260,18 +271,14 @@ class AssetManager:
         self.assets[KRW].free = str(free - amount)
         self.assets[KRW].locked = str(locked + amount)
 
+    def subtract_free_balance(self, amount: int):
+        free = int(self.assets[KRW].free)
+        self.assets[KRW].free = str(free - amount)
+
     def subtract_lock_balance(self, amount: int):
         # 매수 후 매수 되었을 경우
         locked = int(self.assets[KRW].locked)
-        free = int(self.assets[KRW].free)
-        if locked < amount:  # 시장가 매수 한 경우, locked 되어 있지 않음
-            if free >= amount:
-                self.assets[KRW].free = str(free - amount)
-            else:
-                LOGGER.warning('cannot be subtracted free(%d), locked(%d), amount(%d)',
-                               free, locked, amount)
-        else:
-            self.assets[KRW].locked = str(locked - amount)
+        self.assets[KRW].locked = str(locked - amount)
 
     def add_balance(self, amount: int, is_cancel: bool):
         free = int(self.assets[KRW].free)

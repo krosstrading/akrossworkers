@@ -44,6 +44,7 @@ def buy_market():
     asset_manager.order_event(event1)
     assert len(asset_manager.get_open_orders()) == 0
     assert len(asset_manager.get_hold_assets()) == 2
+    print(asset_manager.assets['KRW'].to_network())
     assert asset_manager.assets['KRW'].free == '5000000'
 
 
@@ -149,6 +150,6 @@ def test_case1():
 
 
 if __name__ == '__main__':
-    # buy_and_cancel()
-    # asset_remove_test()
+    buy_and_cancel()
+    asset_remove_test()
     buy_market()

@@ -77,6 +77,7 @@ class CandleLimitDays:
 
 class OrderType:
     OrderLimit = 'LIMIT'
+    OrderMarket = 'MARKET'
 
 
 class OrderResultType:
