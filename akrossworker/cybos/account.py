@@ -104,7 +104,10 @@ class CybosAccountWorker(RpcHandler):
 
     def on_report_event(self, msg):
         self._conn.send_event(AccountApiCommand.OrderEvent, msg)
-        self._conn.send_event(AccountApiCommand.AssetEvent, self._asset_manager.get_hold_assets())
+        LOGGER.warning('send orderevent: %s', msg)
+        assets = self._asset_manager.get_hold_assets()
+        self._conn.send_event(AccountApiCommand.AssetEvent, assets)
+        LOGGER.warning('send assetevent: %s', assets)
         # client will handle open orders, not sending open order event separately
 
     def on_asset_list(self, **kwargs):

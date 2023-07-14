@@ -220,10 +220,11 @@ class AssetManager:
     def handle_trade_event(self, event: CybosTradeEvent):
         done_item = None
         item = None
+        report = None
         for order_item in self.open_orders:
             result = order_item.set_traded(event)
             if result != IGNORE:
-                self.callback(order_item.get_trade_report(result).to_network())
+                report = order_item.get_trade_report(result).to_network()
                 item = order_item
                 done_item = order_item if result == OrderResultType.SubTypeFilled else None
                 break
@@ -242,8 +243,12 @@ class AssetManager:
         if done_item is not None:
             self.open_orders.remove(done_item)
 
+        if report is not None:
+            self.callback(report)
+
     def handle_cancel_event(self, event: CybosTradeEvent):
         done_item = None
+        report = None
         for order_item in self.open_orders:
             if order_item.order_id == event.order_num:
                 done_item = order_item
@@ -252,10 +257,13 @@ class AssetManager:
                     self.add_balance(order_item.get_cancel_amount(), True)
                 else:
                     self.move_lock_asset_to_free(event.symbol, order_item.get_remained_qty())
-                self.callback(order_item.get_cancel_report().to_network())
+                report = order_item.get_cancel_report().to_network()
                 break
         if done_item is not None:
             self.open_orders.remove(done_item)
+
+        if report is not None:
+            self.callback(report)
 
     def order_event(self, event: CybosTradeEvent):
         if event.status == CybosTradeEvent.Submit:
