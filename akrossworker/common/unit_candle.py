@@ -53,8 +53,9 @@ class UnitCandle:
         ms + 1 의 경우 09:00:00 초에 장전과 장중 동시에 발생하는 경우,
         겹치게 되는 문제 해결을 위해 +1 추가
         """
-        if last_start > 0 and last_start == start_time:
-            start_time += 1
+        if last_start > 0 and last_start >= start_time:
+            start_time = last_start + 1
+
         return start_time
 
     def get_end_time(self, start_time: int) -> int:
