@@ -17,6 +17,7 @@ from akross.rpc.base import RpcBase
 from akrossworker.common.args_constants import ApiArgKey as Args
 from akrossworker.cybos.candle_cache import CybosCandleCache
 from akross.common import env
+from datetime import datetime
 
 
 LOGGER = logging.getLogger(__name__)
@@ -88,6 +89,7 @@ class CybosRestCache(RpcBase):
     async def on_krx_rank_symbols(self, **kwargs):
         util.check_required_parameters(kwargs, 'searchDate')
         search_time = aktime.get_start_time(kwargs['searchDate'], 'd', 'KRX')
+        LOGGER.warning('search date %s', datetime.fromtimestamp(search_time / 1000))
         data = await self._db.get_data(DBEnum.KRX_HAS_PROFIT_DB, 'ranks', {
             'startTime': {'$gte': search_time},
             'endTime': {'$lte': search_time + aktime.interval_type_to_msec('d') - 1}
@@ -97,6 +99,8 @@ class CybosRestCache(RpcBase):
             for symbol in data[0]['symbols']:
                 if symbol in self._symbols:
                     symbol_infos.append(self._symbols[symbol].symbol_info.to_network())
+                else:
+                    LOGGER.warning('symbol not exist on self._symbols %s', symbol)
             return symbol_infos
         return []
 

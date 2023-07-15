@@ -29,6 +29,7 @@ def remain_asset_bug():
 
     asset_manager = AssetManager(10000000, [], {}, callback)
     asset_manager.add_new_order('a168360', True, 0, 54)
+    # 펨트론
     event1 = CybosTradeEvent('4', 'a168360', 23667, 54, 0, '2')
     event2 = CybosTradeEvent('1', 'a168360', 23667, 54, 18450, '2')
     # {'flag': '4', 'code': 'a168360', 'order_number': 23667, 'quantity': 54, 'price': 0, 'order_type': '2'}
@@ -36,12 +37,14 @@ def remain_asset_bug():
     asset_manager.order_event(event1)
     asset_manager.order_event(event2)
 
+    # 미래반도체
     asset_manager.add_new_order('a254490', True, 0, 33)
     event1 = CybosTradeEvent('4', 'a254490', 23697, 33, 0, '2')
     event2 = CybosTradeEvent('1', 'a254490', 23697, 33, 29950, '2')
     asset_manager.order_event(event1)
     asset_manager.order_event(event2)
 
+    # 웰바이오텍
     asset_manager.add_new_order('a010600', True, 0, 303)
     # {'flag': '4', 'code': 'a010600', 'order_number': 31848, 'quantity': 937, 'price': 3200, 'order_type': '2'}
     # {'flag': '1', 'code': 'a010600', 'order_number': 31848, 'quantity': 937, 'price': 3200, 'order_type': '2'}

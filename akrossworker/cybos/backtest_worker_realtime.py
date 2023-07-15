@@ -181,7 +181,10 @@ class CybosBacktestWorker(RpcBase):
                     if self._stream_pause:
                         LOGGER.warning('pause state')
                         await asyncio.sleep(1)
-                        continue
+                        if self._stream_stop:
+                            break
+                        else:
+                            continue
                         
                     stream = stream_data.pop(0)
                     frame_timegap = (stream.event_time - current_frametime) / self._stream_speed

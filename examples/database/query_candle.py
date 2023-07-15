@@ -13,7 +13,7 @@ async def read(db_name, collection, query):
 
 
 async def main():
-    data = await read('krx_quote', 'a012030_1d', {})
+    data = await read('krx_quote', 'a168360_1d', {})
     start_times = {}
     prev_time = 0
     print('data len', len(data),
