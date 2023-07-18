@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     clients = []
     target = 'python3 -m '
-    
+    subprocess.call('which python3', shell=True)
     clients.append(
         ClientRunner(target + 'akrossworker.cybos.create_db.stream_recorder'))
     clients.append(ClientRunner(target + 'akrossworker.cybos.rest_cache'))
