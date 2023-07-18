@@ -12,8 +12,7 @@ def callback(msg):
         print('asset event', my_asset_manager.get_hold_assets())
 
 
-#  TODO: asset 테스트
-#  매수 후 cancel 시 balance
+#  TODO: 매수, 매도 접수 후 (4) 후, (1) 전 후 Cancel 들어오는 경우 case 추가
 
 def remain_asset_bug():
     # 시장가로 산 뒤 3270으로 매도하였으나 asset 이벤트에 그대로 남이 있음
@@ -134,6 +133,37 @@ def buy_market():
     assert asset_manager.assets['KRW'].free == '5000000'
 
 
+def open_order_bug():
+    # 7월 18일 주문 끝나고 남아 있는 거 없는 상태에서
+    # a011930, a347860 이 NEW MARKET 으로 남아 있음 둘다 BUY 상태
+    asset_manager = AssetManager(10000000, [], {}, callback)
+    asset_manager.add_new_order('a011930', True, 2800, 714)
+    event1 = CybosTradeEvent('4', 'a011930', 26715, 714, 2800, '2')
+    asset_manager.order_event(event1)
+    event1 = CybosTradeEvent('1', 'a011930', 26715, 714, 2800, '2')
+    asset_manager.order_event(event1)
+    assert len(asset_manager.get_open_orders()) == 0
+
+    asset_manager.add_new_order('a011930', True, 2750, 727)
+    event1 = CybosTradeEvent('4', 'a011930', 44117, 727, 2750, '2')
+    asset_manager.order_event(event1)
+    assert len(asset_manager.get_open_orders()) == 1
+    asset_manager.cancel_order(44117, 44239)
+    event1 = CybosTradeEvent('4', 'a011930', 44239, 727, 0, '2')
+    asset_manager.order_event(event1)
+    event1 = CybosTradeEvent('2', 'a011930', 44239, 727, 0, '2')
+    asset_manager.order_event(event1)
+    assert len(asset_manager.get_open_orders()) == 0
+
+    asset_manager.add_new_order('a011930', False, 0, 714)
+    event1 = CybosTradeEvent('4', 'a011930', 44274, 714, 0, '1')
+    asset_manager.order_event(event1)
+    event1 = CybosTradeEvent('1', 'a011930', 44274, 714, 2745, '1')
+    asset_manager.order_event(event1)
+    
+    assert len(asset_manager.get_open_orders()) == 0
+
+
 def asset_remove_test():
     asset_manager = AssetManager(10000000, [], {}, callback)
     asset_manager.add_new_order('a005930', True, 50000, 100)
@@ -236,6 +266,7 @@ def test_case1():
 
 
 if __name__ == '__main__':
+    open_order_bug()
     balance_test()
     remain_asset_bug()
     buy_and_cancel()

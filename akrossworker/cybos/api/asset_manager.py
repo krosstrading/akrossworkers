@@ -104,6 +104,11 @@ class OrderItem:
             self.order_id = event.order_num
             return True
         return False
+    
+    def is_order_id_matched(self, event: CybosTradeEvent):
+        if self.order_id == event.order_num:
+            return True
+        return False
 
     def set_traded(self, event: CybosTradeEvent):
         if self.order_id != -1 and event.order_num == self.order_id:
@@ -213,6 +218,9 @@ class AssetManager:
             if order_item.is_matched(event):
                 found = True
                 self.callback(order_item.get_new_report().to_network())
+                break
+            elif order_item.is_order_id_matched(event):  # 취소 경우
+                found = True
                 break
         if not found:
             self.open_orders.append(OrderItem.CreateItemFromEvent(event))
