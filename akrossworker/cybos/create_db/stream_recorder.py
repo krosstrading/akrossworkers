@@ -8,12 +8,12 @@ import sys
 
 from akrossworker.common.db import Database
 from akrossworker.common.db_quote_query import DBQuoteQuery
-from common.util import get_symbol_id
 from akross.common import aktime
 from akrossworker.common.protocol import (
     PriceStreamProtocol,
     SymbolInfo
 )
+from akrossworker.common.util import get_symbol_id
 
 
 LOGGER = logging.getLogger(__name__)
