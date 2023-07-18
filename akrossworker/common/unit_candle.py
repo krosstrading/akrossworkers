@@ -78,6 +78,7 @@ class UnitCandle:
         col = self.symbol_info.symbol.lower() + '_1' + self.interval_type
         # LOGGER.info('%s', col)
         now = aktime.get_msec()
+        krx_start_time = aktime.get_start_time(now, 'd', self.symbol_info.tz) + aktime.interval_type_to_msec('h') * 9
         stored = await self.db.get_data(
             self.db_name, col, {'startTime': {'$gte': self.get_db_start_search()}})
 
@@ -110,13 +111,14 @@ class UnitCandle:
                 if candle.start_time <= self.db_last_record:
                     LOGGER.warning('skip data')
                     continue
-                # db 에 넣는 거 다시 고려
-                # elif candle.end_time < now and await self.db.connected():
-                #     await self.db.insert_one(self.db_name, col, candle.to_database())
-                #     self.db_last_record = candle.end_time
-                    # LOGGER.info('%s db insert %s',
-                    #             col,
-                    #             datetime.fromtimestamp(int(candle.end_time / 1000)))
+                elif self.interval_type == 'd':
+                    """
+                    일봉이 실제 장 시작전에 어제 종가로 들어와서, 
+                    잘못된 open price로 설정되는 문제 방지
+                    stream 통해서 일봉 생성하도록 장 시작전 일봉은 무시
+                    """
+                    if candle.start_time <= now <= candle.end_time and now < krx_start_time:
+                        continue
                 self.data.append(candle)
         else:
             LOGGER.error('fetch error(%s) interval:%s',
