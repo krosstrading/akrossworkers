@@ -76,11 +76,7 @@ class CybosRestCache(RpcBase):
                     CybosCandleCache(
                         self._db, DBEnum.KRX_QUOTE_DB,
                         self._conn, self._worker, symbol_info)
-                
-        candidate_symbols = await self.on_krx_rank_symbols(searchDate=aktime.get_msec())
-        LOGGER.warning('today cache candle count %d', len(candidate_symbols))
-        for symbol_info in candidate_symbols:
-            await self._symbols[symbol_info['symbol'].lower()].run()
+                await self._symbols[symbol_info.symbol.lower()].run()
 
     async def on_orderbook(self, **kwargs):
         util.check_required_parameters(kwargs, 'symbol')

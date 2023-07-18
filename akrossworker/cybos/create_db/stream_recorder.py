@@ -92,7 +92,7 @@ async def check_exit():
     while True:
         now = datetime.now()
         if prev.hour == 4 and now.hour == 5:
-            LOGGER.error('turn off cache')
+            LOGGER.error('turn off stream recorder')
             sys.exit(0)
         prev = datetime.now()
         await asyncio.sleep(60)

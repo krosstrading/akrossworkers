@@ -39,6 +39,7 @@ if __name__ == '__main__':
     while True:
         now = datetime.now()
         if prev.hour == 7 and now.hour == 8:
+            print('start clients', datetime.now())
             for client in clients:
                 client.start()
 
