@@ -6,8 +6,8 @@ from akross.connection.aio.quote_channel import QuoteChannel, Market
 from akrossworker.common.command import ApiCommand
 import sys
 
-from common.db_quote_query import DBQuoteQuery
 from akrossworker.common.db import Database
+from akrossworker.common.db_quote_query import DBQuoteQuery
 from common.util import get_symbol_id
 from akross.common import aktime
 from akrossworker.common.protocol import (
