@@ -39,6 +39,7 @@ class CybosRestCache(RpcBase):
         self._db = Database()
 
     async def preload(self):
+        asyncio.create_task(self._check_exit())
         await self._conn.connect()
         await self._conn.market_discovery()
         await self._conn.wait_for_market(MARKET_NAME)
@@ -48,6 +49,16 @@ class CybosRestCache(RpcBase):
             sys.exit(1)
         self._worker = krx[0]
         await self.regist_symbols()
+
+    async def _check_exit(self):
+        prev = datetime.now()
+        while True:
+            now = datetime.now()
+            if prev.hour == 4 and now.hour == 5:
+                LOGGER.error('turn off cache')
+                sys.exit(0)
+            prev = datetime.now()
+            await asyncio.sleep(60)
 
     async def regist_symbols(self) -> None:
         _, symbols = await self._conn.api_call(

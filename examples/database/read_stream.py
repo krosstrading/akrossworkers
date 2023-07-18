@@ -1,5 +1,4 @@
 from datetime import datetime
-import sys
 import asyncio
 from typing import List
 from akrossworker.common.db import DBEnum
@@ -8,10 +7,7 @@ from akrossworker.common.args_constants import (
     CandleLimitDays
 )
 from akrossworker.common.db_quote_query import DBQuoteQuery
-from akrossworker.common.protocol import (
-    PriceCandleProtocol,
-    PriceStreamProtocol
-)
+from akrossworker.common.protocol import PriceStreamProtocol
 
 
 def get_db_start_search(interval_type) -> int:
@@ -44,7 +40,6 @@ async def read():
         if data['timeType'] != current_type:
             print(datetime.fromtimestamp(data['time'] / 1000), 'type', data['timeType'])
             current_type = data['timeType']
-    
 
 
 async def main():
@@ -56,5 +51,5 @@ if __name__ == '__main__':
     LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
                   '-35s %(lineno) -5d: %(message)s')
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
-    
-    asyncio.run(main())    
+
+    asyncio.run(main())
