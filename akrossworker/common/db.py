@@ -10,8 +10,8 @@ from akross.common import env
 LOGGER = logging.getLogger(__name__)
 
 
-MONGO_URI = f"mongodb://{quote_plus('akross')}:{quote_plus('Akross@q')}" \
-            "@" + env.get_rmq_url()
+MONGO_URI = f"mongodb://{quote_plus(env.get_mongo_user())}:{quote_plus(env.get_mongo_password())}" \
+            "@" + env.get_mongo_url()
 
 
 class DBEnum(str, Enum):
@@ -26,9 +26,11 @@ class DBEnum(str, Enum):
 
 
 class Database:
-    def __init__(self):
+    def __init__(self, mongo_url: str = ''):
+        if len(mongo_url) == 0:
+            mongo_url = MONGO_URI
         self.client = motor.motor_asyncio.AsyncIOMotorClient(
-            MONGO_URI, serverSelectionTimeoutMS=3000)
+            mongo_url, serverSelectionTimeoutMS=3000)
         self.check_connected = False
         self._is_connected = False
     

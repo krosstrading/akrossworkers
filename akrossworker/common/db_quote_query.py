@@ -1,9 +1,10 @@
+from typing import List
 from akrossworker.common.db import DBEnum, Database
 
 
 class DBQuoteQuery:
-    def __init__(self, quote_db_name):
-        self.db = Database()
+    def __init__(self, quote_db_name, mongo_url: str = ''):
+        self.db = Database(mongo_url)
         self.quote_db_name = quote_db_name
 
     async def find_first_ms(self, symbol: str, interval_type: str) -> int:
@@ -15,6 +16,9 @@ class DBQuoteQuery:
 
     async def insert_one(self, db_name: str, collection_name: str, data) -> None:
         await self.db.insert_one(db_name, collection_name, data)
+    
+    async def insert_many(self, db_name: str, collection_name: str, data: List[dict]) -> None:
+        await self.db.insert_many(db_name, collection_name, data)
 
     async def find_latest_ms(self, symbol: str, interval_type: str) -> int:
         row = await self.db.find_latest(

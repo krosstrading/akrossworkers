@@ -22,18 +22,12 @@ if __name__ == '__main__':
     clients = []
     target = 'python3 -m '
     subprocess.call('which python3', shell=True)
-    clients.append(
-        ClientRunner(target + 'akrossworker.cybos.create_db.stream_recorder'))
+    
     clients.append(ClientRunner(target + 'akrossworker.cybos.rest_cache'))
 
     if len(sys.argv) > 1:
-        if sys.argv[1] == 'stream':
+        if sys.argv[1] == 'force':
             clients[0].start()
-        elif sys.argv[1] == 'cache':
-            clients[1].start()
-        elif sys.argv[1] == 'all':
-            for client in clients:
-                client.start()
 
     prev = datetime.now()
     while True:

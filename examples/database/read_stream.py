@@ -33,13 +33,14 @@ async def read():
     """
     check when extended time and normal time mixed
     """
-    data = await get_rprice_on_day(db, 'a000430', datetime(2023, 7, 18).timestamp() * 1000)
+    data = await get_rprice_on_day(db, 'a005930', datetime(2023, 7, 19).timestamp() * 1000)
     current_type = ''
     for row in data:
         data = row.to_database()
-        if data['timeType'] != current_type:
-            print(datetime.fromtimestamp(data['time'] / 1000), 'type', data['timeType'])
-            current_type = data['timeType']
+        print(datetime.fromtimestamp(data['time'] / 1000), data)
+        # if data['timeType'] != current_type:
+        #     print(datetime.fromtimestamp(data['time'] / 1000), 'type', data['timeType'])
+        #     current_type = data['timeType']
 
 
 async def main():

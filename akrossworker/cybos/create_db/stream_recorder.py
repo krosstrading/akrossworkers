@@ -20,19 +20,98 @@ LOGGER = logging.getLogger(__name__)
 DB_NAME = 'throwback'
 
 
+class StreamWriter:
+    Price = 0
+    Orderbook = 1
+
+    def __init__(self, db: DBQuoteQuery):
+        self.db = db
+        self.queue = asyncio.Queue()
+        
+        asyncio.create_task(self.start_loop())
+
+    async def add_price_stream(self, symbol: str, data):
+        self.queue.put_nowait((StreamWriter.Price, symbol.lower(), data))
+
+    async def add_orderbook_stream(self, symbol: str, data):
+        self.queue.put_nowait((StreamWriter.Orderbook, symbol.lower(), data))
+
+    async def write_price_streams(self, symbol: str, data):
+        LOGGER.warning('write price streams %s(len:%d), queue left: %d',
+                       symbol, len(data), self.queue.qsize)
+        try:
+            await self.db.insert_many(DB_NAME, 'p_' + symbol, data)
+        except Exception as e:
+            LOGGER.warning('write price error %s, %s', symbol, str(e))
+        LOGGER.warning('write price done')
+
+    async def write_orderbook_streams(self, symbol: str, data):
+        LOGGER.warning('write orderbook streams %s(len:%d) queue left: %d',
+                       symbol, len(data), self.queue.qsize)
+        try:
+            await self.db.insert_many(DB_NAME, 'o_' + symbol, data)
+        except Exception as e:
+            LOGGER.warning('write orderbook error %s, %s', symbol, str(e))
+        LOGGER.warning('write orderbook done')
+
+    async def start_loop(self):
+        price_streams: Dict[str, List[int, List]] = {}   # key: symbol, value: (count, streams[])
+        orderbook_streams: Dict[str, List[int, List]] = {}
+        last_process_time = aktime.get_msec()
+        while True:
+            try:
+                item = self.queue.get_nowait()
+            except asyncio.QueueEmpty:
+                item = None
+
+            if item is not None:
+                last_process_time = aktime.get_msec()
+                data_type, symbol, data = item
+                if data_type == StreamWriter.Price:
+                    if symbol not in price_streams:
+                        price_streams[symbol] = [1, [data]]
+                    else:
+                        price_streams[symbol][0] += 1
+                        price_streams[symbol][1].append(data)
+                        if price_streams[symbol][0] >= 1000:
+                            await self.write_price_streams(symbol, price_streams[symbol][1])
+                            del price_streams[symbol]
+                elif data_type == StreamWriter.Orderbook:
+                    if symbol not in orderbook_streams:
+                        orderbook_streams[symbol] = [1, [data]]
+                    else:
+                        orderbook_streams[symbol][0] += 1
+                        orderbook_streams[symbol][1].append(data)
+                        if orderbook_streams[symbol][0] >= 1000:
+                            await self.write_orderbook_streams(symbol, orderbook_streams[symbol][1])
+                            del orderbook_streams[symbol]
+            else:
+                if aktime.get_msec() - last_process_time > 1000 * 60 * 10:
+                    last_process_time = aktime.get_msec()
+                    for symbol, value in price_streams.items():
+                        await self.write_price_streams(symbol, value[1])
+                        del price_streams[symbol]
+
+                    for symbol, value in orderbook_streams.items():
+                        await self.write_orderbook_streams(symbol, value[1])
+                        del orderbook_streams[symbol]
+                else:
+                    await asyncio.sleep(1)
+
+
 class SymbolSubscriber:
     def __init__(
         self,
         quote: QuoteChannel,
         market: Market,
-        db: DBQuoteQuery,
+        writer: StreamWriter,
         symbol: str
     ):
-        self.db = db
+        self.writer = writer
         self.quote = quote
         self.market = market
         self.symbol = symbol.lower()
-
+        
     async def start_subscribe(self):
         await self.quote.subscribe_stream(
             self.market,
@@ -48,18 +127,11 @@ class SymbolSubscriber:
         )
 
     async def orderbook_stream_arrived(self, msg):
-        await self.db.insert_one(
-            DB_NAME,
-            'o_' + self.symbol,
-            msg
-        )
+        await self.writer.add_orderbook_stream(self.symbol, msg)
 
     async def price_stream_arrived(self, msg):
-        await self.db.insert_one(
-            DB_NAME,
-            'p_' + self.symbol,
-            PriceStreamProtocol.ParseNetwork(msg).to_database()
-        )
+        await self.writer.add_price_stream(self.symbol,
+                                           PriceStreamProtocol.ParseNetwork(msg).to_database())
 
 
 class Collector:
@@ -72,15 +144,17 @@ class Collector:
     ):
         self.quote = quote
         self.market = market
+        self.stream_writer = StreamWriter(db)
         self.db = db
         self.symbols: Dict[str, SymbolSubscriber] = {}
         for candidate in candidates:
-            self.symbols[get_symbol_id(candidate)] = SymbolSubscriber(
-                self.quote,
-                self.market,
-                self.db,
-                candidate.symbol
-            )
+            if candidate.symbol.lower() == 'a005930':
+                self.symbols[get_symbol_id(candidate)] = SymbolSubscriber(
+                    self.quote,
+                    self.market,
+                    self.stream_writer,
+                    candidate.symbol
+                )
 
     async def start(self):
         for symbol in self.symbols.values():
