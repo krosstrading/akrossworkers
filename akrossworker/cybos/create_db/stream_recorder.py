@@ -2,12 +2,13 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import Dict, List
-from akross.connection.aio.quote_channel import QuoteChannel, Market
-from akrossworker.common.command import ApiCommand
 import sys
+from pymongo import MongoClient
+from urllib.parse import quote_plus
 
-from akrossworker.common.db import Database
-from akrossworker.common.db_quote_query import DBQuoteQuery
+from akross.connection.aio.quote_channel import QuoteChannel, Market
+from akross.common import env
+from akrossworker.common.command import ApiCommand
 from akross.common import aktime
 from akrossworker.common.protocol import (
     PriceStreamProtocol,
@@ -18,14 +19,16 @@ from akrossworker.common.util import get_symbol_id
 
 LOGGER = logging.getLogger(__name__)
 DB_NAME = 'throwback'
+MONGO_URI = f"mongodb://{quote_plus(env.get_mongo_user())}:{quote_plus(env.get_mongo_password())}" \
+            "@" + env.get_mongo_stream_url()
 
 
 class StreamWriter:
     Price = 0
     Orderbook = 1
 
-    def __init__(self, db: DBQuoteQuery):
-        self.db = db
+    def __init__(self, db_collection):
+        self.db = db_collection
         self.queue = asyncio.Queue()
         
         asyncio.create_task(self.start_loop())
@@ -37,22 +40,24 @@ class StreamWriter:
         self.queue.put_nowait((StreamWriter.Orderbook, symbol.lower(), data))
 
     async def write_price_streams(self, symbol: str, data):
-        LOGGER.warning('write price streams %s(len:%d), queue left: %d',
-                       symbol, len(data), self.queue.qsize)
+        LOGGER.debug('write price streams %s(len:%d), queue left: %d',
+                     symbol, len(data), self.queue.qsize())
         try:
-            await self.db.insert_many(DB_NAME, 'p_' + symbol, data)
+            self.db['p_' + symbol].insert_many(data)
         except Exception as e:
             LOGGER.warning('write price error %s, %s', symbol, str(e))
-        LOGGER.warning('write price done')
+            sys.exit(0)
+        LOGGER.debug('write price done')
 
     async def write_orderbook_streams(self, symbol: str, data):
-        LOGGER.warning('write orderbook streams %s(len:%d) queue left: %d',
-                       symbol, len(data), self.queue.qsize)
+        LOGGER.debug('write orderbook streams %s(len:%d) queue left: %d',
+                     symbol, len(data), self.queue.qsize())
         try:
-            await self.db.insert_many(DB_NAME, 'o_' + symbol, data)
+            self.db['o_' + symbol].insert_many(data)
         except Exception as e:
             LOGGER.warning('write orderbook error %s, %s', symbol, str(e))
-        LOGGER.warning('write orderbook done')
+            sys.exit(0)
+        LOGGER.debug('write orderbook done')
 
     async def start_loop(self):
         price_streams: Dict[str, List[int, List]] = {}   # key: symbol, value: (count, streams[])
@@ -60,6 +65,7 @@ class StreamWriter:
         last_process_time = aktime.get_msec()
         while True:
             try:
+                await asyncio.sleep(0)  # to prevent occupy process
                 item = self.queue.get_nowait()
             except asyncio.QueueEmpty:
                 item = None
@@ -75,6 +81,7 @@ class StreamWriter:
                         price_streams[symbol][1].append(data)
                         if price_streams[symbol][0] >= 1000:
                             await self.write_price_streams(symbol, price_streams[symbol][1])
+                            price_streams[symbol][1].clear()
                             del price_streams[symbol]
                 elif data_type == StreamWriter.Orderbook:
                     if symbol not in orderbook_streams:
@@ -84,16 +91,19 @@ class StreamWriter:
                         orderbook_streams[symbol][1].append(data)
                         if orderbook_streams[symbol][0] >= 1000:
                             await self.write_orderbook_streams(symbol, orderbook_streams[symbol][1])
+                            orderbook_streams[symbol][1].clear()
                             del orderbook_streams[symbol]
             else:
                 if aktime.get_msec() - last_process_time > 1000 * 60 * 10:
                     last_process_time = aktime.get_msec()
                     for symbol, value in price_streams.items():
                         await self.write_price_streams(symbol, value[1])
+                        value[1].clear()
                         del price_streams[symbol]
 
                     for symbol, value in orderbook_streams.items():
                         await self.write_orderbook_streams(symbol, value[1])
+                        value[1].clear()
                         del orderbook_streams[symbol]
                 else:
                     await asyncio.sleep(1)
@@ -139,22 +149,20 @@ class Collector:
         self,
         quote: QuoteChannel,
         market: Market,
-        db: DBQuoteQuery,
         candidates: List[SymbolInfo]
     ):
+        self.db = MongoClient(MONGO_URI)
         self.quote = quote
         self.market = market
-        self.stream_writer = StreamWriter(db)
-        self.db = db
+        self.stream_writer = StreamWriter(self.db[DB_NAME])
         self.symbols: Dict[str, SymbolSubscriber] = {}
         for candidate in candidates:
-            if candidate.symbol.lower() == 'a005930':
-                self.symbols[get_symbol_id(candidate)] = SymbolSubscriber(
-                    self.quote,
-                    self.market,
-                    self.stream_writer,
-                    candidate.symbol
-                )
+            self.symbols[get_symbol_id(candidate)] = SymbolSubscriber(
+                self.quote,
+                self.market,
+                self.stream_writer,
+                candidate.symbol
+            )
 
     async def start(self):
         for symbol in self.symbols.values():
@@ -178,7 +186,6 @@ async def main():
         LOGGER.warning('SKIP, today is holiday')
         return
     
-    db = Database()
     quote = QuoteChannel('krx.spot')
     await quote.connect()
     await quote.market_discovery()
@@ -193,7 +200,6 @@ async def main():
     collector = Collector(
         quote,
         krx_spot,
-        db,
         krx_symbols
     )
     LOGGER.warning('start stream recorder')

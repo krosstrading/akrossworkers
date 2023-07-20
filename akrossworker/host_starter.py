@@ -32,10 +32,11 @@ if __name__ == '__main__':
     prev = datetime.now()
     while True:
         now = datetime.now()
-        if prev.hour == 7 and now.hour == 8:
-            print('start clients', datetime.now())
-            for client in clients:
-                client.start()
+        if now.hour == 7:
+            if prev.minute == 29 and now.minute == 30:
+                print('start clients', datetime.now())
+                for client in clients:
+                    client.start()
 
         prev = datetime.now()
         time.sleep(60)
