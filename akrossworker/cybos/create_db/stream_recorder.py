@@ -97,14 +97,16 @@ class StreamWriter:
                 if aktime.get_msec() - last_process_time > 1000 * 60 * 10:
                     last_process_time = aktime.get_msec()
                     for symbol, value in price_streams.items():
-                        await self.write_price_streams(symbol, value[1])
-                        value[1].clear()
-                        del price_streams[symbol]
+                        if len(value[1]) > 0:
+                            await self.write_price_streams(symbol, value[1])
+                            value[1].clear()
+                    price_streams.clear()
 
                     for symbol, value in orderbook_streams.items():
-                        await self.write_orderbook_streams(symbol, value[1])
-                        value[1].clear()
-                        del orderbook_streams[symbol]
+                        if len(value[1]) > 0:
+                            await self.write_orderbook_streams(symbol, value[1])
+                            value[1].clear()
+                    orderbook_streams.clear()
                 else:
                     await asyncio.sleep(1)
 

@@ -171,9 +171,8 @@ class CybosBacktestWorker(RpcBase):
             prefetch_task = asyncio.create_task(
                 self._prefetch_stream(targets, self._timeFrame['current'], interval))
             current = self._timeFrame['current']
-            LOGGER.warning('current %s, total tick: %d', datetime_str(current), len(stream_data))
-
             self._timeFrame['current'] += interval
+            LOGGER.warning('send stream data ticks(%d)', len(stream_data))
             if len(stream_data) > 0:
                 current_time = aktime.get_msec()
                 current_frametime = stream_data[0].event_time
@@ -182,6 +181,7 @@ class CybosBacktestWorker(RpcBase):
                         LOGGER.warning('pause state')
                         await asyncio.sleep(1)
                         if self._stream_stop:
+                            LOGGER.warning('stream stop, break loop')
                             break
                         else:
                             continue
