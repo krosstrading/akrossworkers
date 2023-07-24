@@ -3,6 +3,7 @@ import logging
 import sys
 from typing import Dict, List
 import aio_pika
+from urllib.parse import quote_plus
 
 from akross.common import env
 from akross.common import aktime
@@ -23,6 +24,8 @@ from akrossworker.common.util import datetime_str
 
 LOGGER = logging.getLogger(__name__)
 MARKET_NAME = 'krx.spot'
+MONGO_URI = f"mongodb://{quote_plus(env.get_mongo_user())}:{quote_plus(env.get_mongo_password())}" \
+            "@" + env.get_mongo_url()
 
 
 class CybosBacktestWorker(RpcBase):
@@ -50,6 +53,7 @@ class CybosBacktestWorker(RpcBase):
         self._backtestCandle: Dict[str, BacktestCandle] = {}
         self._exchange: aio_pika.abc.AbstractExchange = None
         self._db = Database()
+        self._stream_db = Database(MONGO_URI)
 
     async def preload(self):
         await self._conn.connect()
@@ -171,10 +175,10 @@ class CybosBacktestWorker(RpcBase):
     async def _prefetch_stream(self, targets: List[str], current: int, interval: int):
         stream_data = []
         for symbol in targets:
-            prices = await self._db.get_price_stream_data(symbol, current, current + interval)
+            prices = await self._stream_db.get_price_stream_data(symbol, current, current + interval)
             for price in prices:
                 stream_data.append(PriceStreamProtocol.ParseDatabase(symbol, price))
-            orderbooks = await self._db.get_orderbook_stream_data(symbol, current, current + interval)
+            orderbooks = await self._stream_db.get_orderbook_stream_data(symbol, current, current + interval)
             for orderbook in orderbooks:
                 obs = OrderbookStreamProtocol.ParseNetwork(orderbook)
                 obs.set_target(symbol)
