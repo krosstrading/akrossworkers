@@ -96,7 +96,11 @@ class CybosBacktestWorker(RpcBase):
             'targets': kwargs['targets']
         }
 
-        for target in kwargs['targets']:
+        targets = kwargs['targets']
+        if len(targets) == 0:
+            targets = self._symbols.keys()
+
+        for target in targets:
             target_name = target.lower()
             if target_name in self._symbols:
                 self._backtestCandle[target_name] = BacktestCandle(
