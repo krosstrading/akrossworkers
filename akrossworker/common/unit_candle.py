@@ -71,6 +71,9 @@ class UnitCandle:
     def get_candle(self, interval: int) -> list:
         return grouping.get_candle(self.data, self.interval_type, interval)
 
+    def get_raw_candle(self) -> List[PriceCandleProtocol]:
+        return self.data
+
     async def fetch(self):
         """
         check when extended time and normal time mixed

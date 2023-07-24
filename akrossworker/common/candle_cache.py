@@ -39,6 +39,11 @@ class CandleCache:
             return self.candles[interval_type].get_candle(interval)
         return []
 
+    def get_interval_type_data(self, interval_type: str):
+        if interval_type in self.candles:
+            return self.candles[interval_type].get_raw_candle()
+        return []
+
     def get_symbol_info(self):
         return self.symbol_info
 

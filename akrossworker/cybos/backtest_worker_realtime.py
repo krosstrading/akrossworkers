@@ -36,9 +36,11 @@ class CybosBacktestWorker(RpcBase):
         self.next = self.on_next
         self.setSpeed = self.on_set_speed
         self.pause = self.on_pause
+        self.krxAmountRank = self.on_krx_amount_rank
 
         self._worker: Market = None
         self._timeFrame = None
+        self._current_time = 0
         self._is_streaming = False
         self._stream_pause = False
         self._stream_speed = 1
@@ -80,6 +82,7 @@ class CybosBacktestWorker(RpcBase):
         # remove all datas existing
         util.check_required_parameters(kwargs, 'backtest', 'startTime', 'endTime', 'targets')
         await self.on_finish_backtest()
+        self._current_time = 0
         self._stream_speed = 1
         self._exchange = await self._conn.get_stream_exchange(kwargs['backtest'], auto_delete=False)
         self._timeFrame = {
@@ -110,7 +113,7 @@ class CybosBacktestWorker(RpcBase):
             self._stream_pause = False
         elif not self._is_streaming:
             asyncio.create_task(self.start_stream())
-        
+
         return {}
 
     async def on_pause(self, **kwargs):
@@ -144,6 +147,26 @@ class CybosBacktestWorker(RpcBase):
         if symbol in self._backtestCandle:
             return await self._backtestCandle[symbol].get_data(interval)
         return []
+    
+    async def on_krx_amount_rank(self, **kwargs):
+        if self._current_time == 0:
+            return []
+        candle_start_time = aktime.get_start_time(self._current_time, 'm', 'KRX')
+        candidates = []
+
+        for symbol, cache in self._backtestCandle.items():
+            candles = await cache.get_data('1m')
+            if (len(candles) > 0 and
+                    candles[-1].start_time == candle_start_time and
+                    symbol in self._symbols):
+                amount = int(candles[-1].quote_asset_volume)
+                market_cap = int(self._symbols[symbol].market_cap)
+                ratio = amount / market_cap
+                candidates.append({'symbol_info': self._symbols[symbol],
+                                   'ratio': ratio})
+        candidates.sort(key=lambda candidate: candidate['ratio'], reverse=True)
+        candidates = candidates[:15]
+        return [candidate['symbol_info'] for candidate in candidates]
 
     async def _prefetch_stream(self, targets: List[str], current: int, interval: int):
         stream_data = []
@@ -176,6 +199,8 @@ class CybosBacktestWorker(RpcBase):
             if len(stream_data) > 0:
                 current_time = aktime.get_msec()
                 current_frametime = stream_data[0].event_time
+                self._current_time = current_frametime
+
                 while len(stream_data) > 0:
                     if self._stream_pause:
                         LOGGER.warning('pause state')

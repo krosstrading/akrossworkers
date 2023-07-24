@@ -32,9 +32,11 @@ class CybosRestCache(RpcBase):
         self.orderbook = self.on_orderbook
         self.search = self.on_search
         self.krxRank = self.on_krx_rank_symbols
+        self.krxAmountRank = self.on_krx_amount_rank
 
         self._worker: Market = None
         self._symbols: Dict[str, CandleCache] = {}
+        self._symbol_info_cache: Dict[str, SymbolInfo] = {}
         self._conn = QuoteChannel(MARKET_NAME)
         self._db = Database()
 
@@ -72,6 +74,7 @@ class CybosRestCache(RpcBase):
             LOGGER.info('progress(%s) %d/%d', symbol_info.symbol, i+1, len(symbols))
             if symbol_info.symbol not in self._symbols:
                 symbol_name = symbol_info.symbol.lower()
+                self._symbol_info_cache[symbol_name] = symbol_info
                 self._symbols[symbol_name] = \
                     CybosCandleCache(
                         self._db, DBEnum.KRX_QUOTE_DB,
@@ -110,6 +113,24 @@ class CybosRestCache(RpcBase):
                     LOGGER.warning('symbol not exist on self._symbols %s', symbol)
             return symbol_infos
         return []
+    
+    async def on_krx_amount_rank(self, **kwargs):
+        candle_start_time = aktime.get_start_time(aktime.get_msec(), 'm', 'KRX')
+        candidates = []
+
+        for symbol, cache in self._symbols.items():
+            candles = cache.get_interval_type_data('m')
+            if (len(candles) > 0 and
+                    candles[-1].start_time == candle_start_time and
+                    symbol in self._symbol_info_cache):
+                amount = int(candles[-1].quote_asset_volume)
+                market_cap = int(self._symbol_info_cache[symbol].market_cap)
+                ratio = amount / market_cap
+                candidates.append({'symbol_info': self._symbol_info_cache[symbol],
+                                   'ratio': ratio})
+        candidates.sort(key=lambda candidate: candidate['ratio'], reverse=True)
+        candidates = candidates[:15]
+        return [candidate['symbol_info'] for candidate in candidates]
 
     async def on_symbol_info(self, **kwargs):
         result = []
