@@ -197,6 +197,7 @@ def get_kline_by_count(symbol, interval_type, count):
     response: List[PriceCandleProtocol] = data
     if len(response) == 0:
         return []
+    
     if len(response) > count:
         response = response[-count:]
     else:
@@ -210,8 +211,13 @@ def get_kline_by_count(symbol, interval_type, count):
                                        interval_type,
                                        yyyymmdd(end_time - expected_range),
                                        yyyymmdd_except_holiday(end_time))
+            # 주봉, 2013.xxxx 부터 2023.7.21 요청하였을 때,
+            # 2023.7.23 ~ 2023.7.30 일 데이터 return 되어 무한 loop 되는 문제
+            if len(data) == 0 or data[0].end_time >= response[0].end_time:
+                break
+
             response[:0] = data
-            if len(data) == 0 or len(response) > count:
+            if len(response) > count:
                 break
         response = response[-count:]
     return response
