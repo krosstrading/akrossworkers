@@ -1,8 +1,11 @@
 from akrossworker.cybos.api import com_obj
+import logging
 from PyQt5 import QtCore
 
 
+LOGGER = logging.getLogger(__name__)
 # get_remain_time return as milliseconds
+
 
 class CybosConnection(QtCore.QObject):
     request_available = QtCore.pyqtSignal()
@@ -36,31 +39,31 @@ class CybosConnection(QtCore.QObject):
 
     def check_available(self):
         if self.request_left_count() > 0:
-            self.request_available.emit()
             self._available_check_timer.stop()
+            self.request_available.emit()
 
     def check_order_available(self):
         if self.order_left_count() > 0:
-            self.order_available.emit()
             self._order_check_timer.stop()
+            self.order_available.emit()
 
     def wait_until_available(self):
         if self.request_left_count() <= 0:
-            print('*' * 10, 'Request Limit', '*' * 10)
+            LOGGER.warning('Request Limit')
             event_loop = QtCore.QEventLoop()
             self.request_available.connect(event_loop.quit)
             self._available_check_timer.start()
             event_loop.exec()
-            print('*' * 10, 'quit Limit Block', '*' * 10)
+            LOGGER.warning('quit Request Limit')
 
     def wait_until_order_available(self):
         if self.order_left_count() <= 0:
-            print('*' * 10, 'Request Order Limit', '*' * 10)
+            LOGGER.warning('Order Request Limit')
             event_loop = QtCore.QEventLoop()
             self.order_available.connect(event_loop.quit)
             self._order_check_timer.start()
             event_loop.exec()
-            print('*' * 10, 'quit Order Limit Block', '*' * 10)
+            LOGGER.warning('quite Order Request Limit')
 
 
 if __name__ == '__main__':

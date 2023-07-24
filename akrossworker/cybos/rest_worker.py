@@ -105,6 +105,7 @@ class CybosRestWorker(RpcHandler):
         protocol_result = []
         for data in res:
             protocol_result.append(data.to_network())
+        LOGGER.info('send candle response')
         return protocol_result
 
     def on_symbol_info(self, **kwargs):

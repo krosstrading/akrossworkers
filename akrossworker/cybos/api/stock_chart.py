@@ -343,6 +343,8 @@ def test_period():
 
 def test():
     print('run test')
+    get_kline('a430220', 'M', {'cache': False, 'startTime': 1688137200000, 'endTime': 1690155241588})
+    
     # 월봉: 시작 일자, 종료 상관없이 1980년부터 전체 출력
     # 월봉 date는 20220100
     # result = get_period_data_raw('A005930', 'M', 0, 20200101)
@@ -414,11 +416,28 @@ def test():
 
 if __name__ == '__main__':
     import logging
+    import sys
+    from PyQt5.QtCore import QCoreApplication
+    from PyQt5 import QtCore
+
+    class TestObject(QtCore.QObject):
+        def __init__(self):
+            super().__init__()
+            self.timer = QtCore.QTimer()
+            self.timer.setInterval(100)
+            self.timer.timeout.connect(self.request_candle)
+            self.timer.start()
+
+        def request_candle(self):
+            test()
+
     LOG_FORMAT = ('%(levelname) -10s %(asctime)s %(name) -30s %(funcName) '
                   '-35s %(lineno) -5d: %(message)s')
     logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
     # test()
-    test_week()
+    app = QCoreApplication([])
+    obj = TestObject()
+    sys.exit(app.exec_())
     # res = get_kline('A005930', '1d', count=100)
     # print('fetched all', len(res))
     # for candle in res:

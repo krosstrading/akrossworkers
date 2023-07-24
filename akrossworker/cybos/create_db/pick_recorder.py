@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from typing import List
 from akross.connection.aio.quote_channel import QuoteChannel, Market
+from akrossworker.common.args_constants import TradingStatus
 from akrossworker.common.command import ApiCommand
 from akrossworker.common.db_quote_query import DBQuoteQuery
 from akrossworker.common.util import date_str
@@ -52,7 +53,9 @@ async def main():
     _, resp = await quote.api_call(krx_spot, ApiCommand.SymbolInfo, cache=False)
 
     for symbol_info_raw in resp:
-        krx_symbols.append(SymbolInfo.CreateSymbolInfo(symbol_info_raw))
+        symbol_info = SymbolInfo.CreateSymbolInfo(symbol_info_raw)
+        if symbol_info.status == TradingStatus.Trading:
+            krx_symbols.append(SymbolInfo.CreateSymbolInfo(symbol_info_raw))
 
     yesterday_start, _ = await get_yesterday_start_time(quote, krx_spot, today_start)
     LOGGER.warning('search ranked yesterday: %s', date_str(yesterday_start))

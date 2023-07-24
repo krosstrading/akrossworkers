@@ -90,7 +90,8 @@ class UnitCandle:
         query = {
             'cache': False,
             'symbol': self.symbol_info.symbol,
-            'interval': '1' + self.interval_type
+            'interval': '1' + self.interval_type,
+            'timeout': 180
         }
         if len(self.data) > 0:
             LOGGER.info('%s db last time %s',
