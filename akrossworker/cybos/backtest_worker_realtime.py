@@ -25,7 +25,7 @@ from akrossworker.common.util import datetime_str
 LOGGER = logging.getLogger(__name__)
 MARKET_NAME = 'krx.spot'
 MONGO_URI = f"mongodb://{quote_plus(env.get_mongo_user())}:{quote_plus(env.get_mongo_password())}" \
-            "@" + env.get_mongo_url()
+            "@" + env.get_mongo_stream_url()
 
 
 class CybosBacktestWorker(RpcBase):
