@@ -20,14 +20,16 @@ LOGGER = logging.getLogger(__name__)
 MARKET_NAME = 'krx.spot'
 
 
-def create_symbol_info() -> List[SymbolInfo]:
+def create_symbol_info(is_all=True) -> List[SymbolInfo]:
     type_name = ['kospi', 'kosdaq', 'etf', 'index']
     call_func = [
         stock_code.get_kospi_company_code_list,
-        stock_code.get_kosdaq_company_code_list,
-        stock_code.get_index_etf_list,
-        stock_code.get_index_list
+        stock_code.get_kosdaq_company_code_list
     ]
+    if is_all:
+        call_func.append(stock_code.get_index_etf_list)
+        call_func.append(stock_code.get_index_list)
+    
     result = []
     for i, sector in enumerate(type_name):
         code_list = call_func[i]()

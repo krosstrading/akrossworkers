@@ -53,7 +53,7 @@ class Ranking:
 
 
 def main():
-    krx_symbols = create_symbol_info()
+    krx_symbols = create_symbol_info(False)
     client = MongoClient(MONGO_URI)
     rank_db = client[DBEnum.KRX_AMOUNT_RANKING_DB]
     quote_db = client[DBEnum.KRX_QUOTE_DB]
