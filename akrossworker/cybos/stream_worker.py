@@ -3,7 +3,6 @@ import logging
 from typing import Dict, List
 from PyQt5.QtCore import QCoreApplication, QTimer
 
-from akross.common import env
 from akross.connection.pika_qt.quote_channel import QuoteChannel
 from akross.connection.pika_qt.rpc_handler import RpcHandler
 from akross.common import util
@@ -47,6 +46,10 @@ class CybosStreamWorker(RpcHandler):
         for code in stock_code.get_kospi_company_code_list():
             self._code_dict[code.upper()] = True
         for code in stock_code.get_kosdaq_company_code_list():
+            self._code_dict[code.upper()] = True
+        for code in stock_code.get_index_etf_list():
+            self._code_dict[code.upper()] = True
+        for code in stock_code.get_index_list():
             self._code_dict[code.upper()] = True
 
     def check_time(self):

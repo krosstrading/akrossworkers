@@ -61,6 +61,29 @@ def get_kosdaq_company_code_list():
     return company_codes
 
 
+def get_index_etf_list():
+    codes = [
+        'A251340',  # KODEX 코스닥 150 선물인버스
+        'A233740',  # KODEX 코스닥 150 레버리지
+        'A252670',  # KODEX 200 선물인버스2X
+        'A122630',  # KODEX 레버리지
+        'A229200',  # KODEX 코스닥 레버리지
+        'A069500'   # KODEX 200
+    ]
+    return codes
+
+
+def get_index_list():
+    codes = [
+        'KGG01P',  # KOSPI
+        'K2G01P',  # KOSPI 200
+        'Q5G01P',  # KOSDAQ 150
+        'K2G02P',  # KOSPI 100
+        'QGG01P'   # KOSDAQ
+    ]
+    return codes
+
+
 def is_company_stock(code):
     return get_stock_section(code) == 1
 

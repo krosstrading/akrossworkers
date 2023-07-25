@@ -21,15 +21,25 @@ MARKET_NAME = 'krx.spot'
 
 
 def create_symbol_info() -> List[SymbolInfo]:
-    type_name = ['kospi', 'kosdaq']
+    type_name = ['kospi', 'kosdaq', 'etf', 'index']
     call_func = [
         stock_code.get_kospi_company_code_list,
-        stock_code.get_kosdaq_company_code_list
+        stock_code.get_kosdaq_company_code_list,
+        stock_code.get_index_etf_list,
+        stock_code.get_index_list
     ]
     result = []
     for i, sector in enumerate(type_name):
         code_list = call_func[i]()
-        market_caps = stock_code.get_marketcaps(code_list)
+        if sector == 'index':
+            min_move = '0.01'
+            market_caps = {}
+            base_asset_precision = 13
+        else:
+            min_move = '0'
+            market_caps = stock_code.get_marketcaps(code_list)
+            base_asset_precision = 0
+        
         for code in code_list:
             listed = aktime.intdate_to_msec(
                 stock_code.get_stock_listed_date(code), 'KRX')
@@ -43,9 +53,9 @@ def create_symbol_info() -> List[SymbolInfo]:
                 stock_code.code_to_name(code),
                 code,
                 'krw',
+                base_asset_precision,
                 0,
-                0,
-                ['0', '0', '0'],
+                ['0', '0', min_move],
                 ['1', '0', '1'],
                 '1',
                 market_caps[code][0] if code in market_caps else '0',
