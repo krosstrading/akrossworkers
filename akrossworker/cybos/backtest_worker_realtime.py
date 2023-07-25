@@ -39,6 +39,7 @@ class CybosBacktestWorker(RpcBase):
         self.next = self.on_next
         self.setSpeed = self.on_set_speed
         self.pause = self.on_pause
+        self.krxRank = self.on_krx_rank_symbols
         self.krxAmountRank = self.on_krx_amount_rank
 
         self._worker: Market = None
@@ -155,7 +156,24 @@ class CybosBacktestWorker(RpcBase):
         if symbol in self._backtestCandle:
             return await self._backtestCandle[symbol].get_data(interval)
         return []
-    
+
+    async def on_krx_rank_symbols(self, **kwargs):
+        util.check_required_parameters(kwargs, 'searchDate')
+        search_time = aktime.get_start_time(kwargs['searchDate'], 'd', 'KRX')
+        data = await self._db.get_data(DBEnum.KRX_HAS_PROFIT_DB, 'ranks', {
+            'startTime': {'$gte': search_time},
+            'endTime': {'$lte': search_time + aktime.interval_type_to_msec('d') - 1}
+        })
+        if len(data) == 1:
+            symbol_infos = []
+            for symbol in data[0]['symbols']:
+                if symbol in self._symbols:
+                    symbol_infos.append(self._symbols[symbol].symbol_info.to_network())
+                else:
+                    LOGGER.warning('symbol not exist on self._symbols %s', symbol)
+            return symbol_infos
+        return []
+
     async def on_krx_amount_rank(self, **kwargs):
         if self._current_time == 0:
             return []
@@ -169,12 +187,14 @@ class CybosBacktestWorker(RpcBase):
                     symbol in self._symbols):
                 amount = int(candles[-1].quote_asset_volume)
                 market_cap = int(self._symbols[symbol].market_cap)
+                if market_cap <= 0:
+                    continue
                 ratio = amount / market_cap
                 candidates.append({'symbol_info': self._symbols[symbol],
                                    'ratio': ratio})
         candidates.sort(key=lambda candidate: candidate['ratio'], reverse=True)
         candidates = candidates[:15]
-        return [candidate['symbol_info'] for candidate in candidates]
+        return [candidate['symbol_info'].to_network() for candidate in candidates]
 
     async def _prefetch_stream(self, targets: List[str], current: int, interval: int):
         stream_data = []

@@ -125,12 +125,14 @@ class CybosRestCache(RpcBase):
                     symbol in self._symbol_info_cache):
                 amount = int(candles[-1].quote_asset_volume)
                 market_cap = int(self._symbol_info_cache[symbol].market_cap)
+                if market_cap <= 0:
+                    continue
                 ratio = amount / market_cap
                 candidates.append({'symbol_info': self._symbol_info_cache[symbol],
                                    'ratio': ratio})
         candidates.sort(key=lambda candidate: candidate['ratio'], reverse=True)
         candidates = candidates[:15]
-        return [candidate['symbol_info'] for candidate in candidates]
+        return [candidate['symbol_info'].to_network() for candidate in candidates]
 
     async def on_symbol_info(self, **kwargs):
         result = []
