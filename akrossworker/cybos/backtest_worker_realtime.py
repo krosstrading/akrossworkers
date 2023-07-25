@@ -185,8 +185,12 @@ class CybosBacktestWorker(RpcBase):
             if (len(candles) > 0 and
                     candles[-1].start_time == candle_start_time and
                     symbol in self._symbols):
-                amount = int(candles[-1].quote_asset_volume)
-                market_cap = int(self._symbols[symbol].market_cap)
+                try:
+                    amount = int(candles[-1].quote_asset_volume)
+                    market_cap = int(self._symbols[symbol].market_cap)
+                except Exception:
+                    continue
+                
                 if market_cap <= 0:
                     continue
                 ratio = amount / market_cap
