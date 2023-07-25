@@ -131,12 +131,13 @@ class SymbolSubscriber:
             self.price_stream_arrived,
             target=self.symbol
         )
-        await self.quote.subscribe_stream(
-            self.market,
-            ApiCommand.OrderbookStream,
-            self.orderbook_stream_arrived,
-            target=self.symbol
-        )
+        if self.symbol.lower()[0] == 'a':
+            await self.quote.subscribe_stream(
+                self.market,
+                ApiCommand.OrderbookStream,
+                self.orderbook_stream_arrived,
+                target=self.symbol
+            )
 
     async def orderbook_stream_arrived(self, msg):
         await self.writer.add_orderbook_stream(self.symbol, msg)
