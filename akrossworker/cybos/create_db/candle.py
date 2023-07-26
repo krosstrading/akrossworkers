@@ -120,11 +120,8 @@ def main() -> None:
             candles = stock_chart.get_kline(symbol_info.symbol.upper(), interval, **query)
             record_data = []
             for data in candles:
-                if data.end_time > now:
-                    if 'force' in sys.argv and interval == '1d':
-                        pass
-                    else:
-                        continue
+                if data.end_time > now or data.start_time < interval_start_time:
+                    continue
                 record_data.append(data.to_database())
 
             if len(record_data) > 0:

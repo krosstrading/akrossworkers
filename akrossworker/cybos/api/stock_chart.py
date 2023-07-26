@@ -276,7 +276,7 @@ def get_kline_by_period(symbol, interval_type, start_time, end_time):
 
     filtered = []
     for data in response:
-        if data.end_time >= start_time:
+        if data.end_time >= start_time and data.start_time < end_time:
             filtered.append(data)
     return filtered
 
