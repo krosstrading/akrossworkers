@@ -131,7 +131,7 @@ class SymbolSubscriber:
             self.price_stream_arrived,
             target=self.symbol
         )
-        if self.symbol.lower()[0] == 'a':
+        if self.symbol[0] == 'a':
             await self.quote.subscribe_stream(
                 self.market,
                 ApiCommand.OrderbookStream,

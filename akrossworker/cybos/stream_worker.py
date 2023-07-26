@@ -19,7 +19,8 @@ from akrossworker.cybos.api.subscribe import (
     StockSubscribe,
     OrderbookSubscribe,
     StockExtendedSubscribe,
-    OrderbookExtendedSubscribe
+    OrderbookExtendedSubscribe,
+    IndexSubscribe
 )
 from akrossworker.cybos.api.subscribe_base import SubscribeBase
 
@@ -32,6 +33,7 @@ class CybosStreamWorker(RpcHandler):
         super().__init__()
         self._conn = conn
         self._code_dict: Dict[str, bool] = {}
+        self._index_dict: Dict[str, bool] = {}
         self._market_time = None
         self._current_market_type = TickTimeType.Normal
         self._exchange_to_objs: Dict[str, List[SubscribeBase]] = {}
@@ -51,6 +53,7 @@ class CybosStreamWorker(RpcHandler):
             self._code_dict[code.upper()] = True
         for code in stock_code.get_index_list():
             self._code_dict[code.upper()] = True
+            self._index_dict[code.upper()] = True
 
     def check_time(self):
         if self.get_market_type() != self._current_market_type:
@@ -122,22 +125,29 @@ class CybosStreamWorker(RpcHandler):
         market_time = self.get_market_type()
         if cmd == ApiCommand.PriceStream:
             if market_time == TickTimeType.Normal:
-                return [
-                    StockSubscribe(symbol,
-                                   exchange_name,
-                                   self.stock_data_arrived),
-                    StockExpectSubscribe(symbol,
-                                         exchange_name,
-                                         self.stock_data_arrived)
-                ]
+                if symbol in self._index_dict:
+                    return [IndexSubscribe(symbol, exchange_name, self.stock_data_arrived)]
+                else:
+                    return [
+                        StockSubscribe(symbol,
+                                       exchange_name,
+                                       self.stock_data_arrived),
+                        StockExpectSubscribe(symbol,
+                                             exchange_name,
+                                             self.stock_data_arrived)
+                    ]
             else:
+                if symbol in self._index_dict:
+                    return []
                 return [
                     StockExtendedSubscribe(symbol,
                                            exchange_name,
                                            self.stock_data_arrived)
                 ]
         elif cmd == ApiCommand.OrderbookStream:
-            if market_time == TickTimeType.Normal:
+            if symbol in self._index_dict:
+                return []
+            elif market_time == TickTimeType.Normal:
                 return [
                     OrderbookSubscribe(symbol,
                                        exchange_name,
@@ -150,7 +160,9 @@ class CybosStreamWorker(RpcHandler):
                                                self.orderbook_data_arrived)
                 ]
         elif cmd == ApiCommand.ProgramStream:
-            if market_time == TickTimeType.Normal:
+            if symbol in self._index_dict:
+                return []
+            elif market_time == TickTimeType.Normal:
                 return [
                     ProgramSubscribe(symbol,
                                      exchange_name,
@@ -182,10 +194,12 @@ class CybosStreamWorker(RpcHandler):
         for k, v in self._exchange_to_objs.items():
             if len(v) > 0 and v[0].time_type != switch_to:
                 for obj in self._exchange_to_objs[k]:
+                    self._conn.add_subscribe_count(-1)
                     obj.stop_subscribe()
                 self._exchange_to_objs[k] = self.get_subscribe_objects(
                     v[0].subscribe_type, k, v[0].code)
                 for obj in self._exchange_to_objs[k]:
+                    self._conn.add_subscribe_count(1)
                     obj.start_subscribe()
 
 

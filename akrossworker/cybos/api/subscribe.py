@@ -316,3 +316,26 @@ class ProgramSubscribe(SubscribeBase):
             str(d['11']),
             str(d['12'])
         ).to_network()
+
+
+class IndexSubscribe(SubscribeBase):
+    def __init__(self, code, exchange_name, callback):
+        super().__init__(TickTimeType.Normal,
+                         ApiCommand.PriceStream,
+                         code,
+                         exchange_name,
+                         callback,
+                         "DsCbo1.StockIndexIS",
+                         [code])
+
+    def eventToData(self, obj):
+        stream = PriceStreamProtocol.CreatePriceStream(
+            self.code,
+            aktime.get_msec(),
+            str(obj.GetHeaderValue(2)),
+            # str(cum_sum - self.prev_qty),
+            str(obj.GetHeaderValue(5) * 1000000),  # 백만단위, Index는 Volume 에 거래대금
+            True,
+            TickTimeType.Normal
+        )
+        return stream.to_network()
