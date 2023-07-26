@@ -29,6 +29,11 @@ class CybosBacktestWorker(RpcBase):
         self.createBacktest = self.on_create_backtest
         self.finishBacktest = self.on_finish_backtest
         self.next = self.on_next
+        self.play = self.on_play
+        self.setSpeed = self.on_set_speed
+        self.pause = self.on_pause
+        self.krxRank = self.on_krx_rank_symbols
+        self.krxAmountRank = self.on_krx_amount_rank
         self._worker: Market = None
         self._timeFrame = None
         self._symbols: Dict[str, SymbolInfo] = {}
@@ -110,6 +115,21 @@ class CybosBacktestWorker(RpcBase):
         if symbol in self._backtestCandle:
             return await self._backtestCandle[symbol].get_data(interval)
         return []
+
+    async def on_krx_amount_rank(self, **kwargs):
+        return []
+
+    async def on_krx_rank_symbols(self, **kwargs):
+        return []
+
+    async def on_play(self, **kwargs):
+        pass
+
+    async def on_pause(self, **kwargs):
+        pass
+
+    async def on_set_speed(self, **kwargs):
+        pass
 
 
 async def main() -> None:
