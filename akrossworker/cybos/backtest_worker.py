@@ -21,6 +21,39 @@ LOGGER = logging.getLogger(__name__)
 MARKET_NAME = 'krx.spot'
 
 
+class StreamStatus:
+    NONE = 0
+    STOP = 1
+    PLAY = 2
+    PAUSE = 3
+
+    def __init__(self):
+        self.speed = 1
+        self.status = StreamStatus.STOP
+        self.control = StreamStatus.NONE
+        self.is_transition = False
+
+    def can_play(self):
+        if self.control == StreamStatus.NONE and self.status == StreamStatus.STOP:
+            return True
+        return False
+
+    def request(self, status):
+        if not self.is_transition:
+            self.control = status
+            self.is_transition = True
+        else:
+            LOGGER.warning('request(%d), but stream in transition', status)
+
+    def set_status(self, status, force=False):
+        if force or self.is_transition:
+            self.is_transition = False
+            self.control = StreamStatus.NONE
+            self.status = status
+        else:
+            LOGGER.warning('cannot set status %d', status)
+
+
 class CybosBacktestWorker(RpcBase):
     def __init__(self):
         super().__init__()
@@ -34,8 +67,10 @@ class CybosBacktestWorker(RpcBase):
         self.pause = self.on_pause
         self.krxRank = self.on_krx_rank_symbols
         self.krxAmountRank = self.on_krx_amount_rank
+
         self._worker: Market = None
         self._timeFrame = None
+        self._stream = StreamStatus()
         self._symbols: Dict[str, SymbolInfo] = {}
         self._conn = QuoteChannel(MARKET_NAME)
         self._backtestCandle: Dict[str, BacktestCandle] = {}
@@ -67,6 +102,7 @@ class CybosBacktestWorker(RpcBase):
                 self._symbols[symbol_name] = symbol_info
 
     async def on_backtest_stream(self, **kwargs):
+        LOGGER.info('')
         return {'exchange': self._exchange.name}
     
     async def on_create_backtest(self, **kwargs):
@@ -92,7 +128,20 @@ class CybosBacktestWorker(RpcBase):
         return {}
 
     async def on_finish_backtest(self, **kwargs):
+        if self._stream.status != StreamStatus.STOP:
+            self._stream.request(StreamStatus.STOP)
+            while not self._stream.can_play():
+                await asyncio.sleep(1)
+        
         self._backtestCandle.clear()
+        return {}
+
+    async def on_play(self, **kwargs):
+        if self._stream.status == StreamStatus.PAUSE:
+            self._stream.request(StreamStatus.PLAY)
+        elif self._stream.status == StreamStatus.STOP:
+            self._stream.request(StreamStatus.PLAY)
+            asyncio.create_task(self.start_stream())
         return {}
 
     async def on_next(self, **kwargs):
@@ -122,14 +171,47 @@ class CybosBacktestWorker(RpcBase):
     async def on_krx_rank_symbols(self, **kwargs):
         return []
 
-    async def on_play(self, **kwargs):
-        pass
+    async def start_stream(self, **kwargs):
+        self._stream.set_status(StreamStatus.PLAY)
+        interval = self._timeFrame['step']
+        prev_time = aktime.get_msec()
+        while self._timeFrame['current'] <= self._timeFrame['end']:
+            if self._stream.control == StreamStatus.PAUSE:
+                self._stream.set_status(StreamStatus.PAUSE)
+            elif self._stream.control == StreamStatus.STOP:
+                break
+            elif self._stream.control == StreamStatus.PLAY:
+                self._stream.set_status(StreamStatus.PLAY)
+            
+            if self._stream.status == StreamStatus.PAUSE:
+                await asyncio.sleep(1)
+                continue
+
+            self._timeFrame['current'] += interval
+            ticks = 0
+            for backtest in self._backtestCandle.values():
+                ticks += await backtest.set_time(self._timeFrame['current'])
+            if ticks == 0:
+                continue  # not waiting for empty period
+
+            time_diff = aktime.get_msec() - prev_time
+            stream_per_sec = 1000 / self._stream.speed
+            if time_diff < stream_per_sec:
+                await asyncio.sleep((stream_per_sec - time_diff) / 1000)
+            prev_time = aktime.get_msec()
+
+        self._stream.set_status(StreamStatus.STOP, True)
 
     async def on_pause(self, **kwargs):
-        pass
+        if self._stream.status == StreamStatus.PLAY:
+            self._stream.request(StreamStatus.PAUSE)
+        return {}
 
     async def on_set_speed(self, **kwargs):
-        pass
+        util.check_required_parameters(kwargs, 'speed')
+        LOGGER.warning('change speed to %d', kwargs['speed'])
+        self._stream.speed = float(kwargs['speed'])
+        return {}
 
 
 async def main() -> None:

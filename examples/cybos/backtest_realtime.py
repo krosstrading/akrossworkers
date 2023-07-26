@@ -2,11 +2,11 @@ import asyncio
 
 from akross.connection.aio.quote_channel import QuoteChannel
 from akrossworker.common.command import ApiCommand
-from akross.common import env
 
 
 async def stream_arrived(msg):
     print('stream msg', msg)
+
 
 async def main():
     await conn.connect()

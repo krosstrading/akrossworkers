@@ -56,12 +56,12 @@ class BacktestCandle:
         if self.time_frame_candle is not None:
             await self.time_frame_candle.fetch()
 
-    async def set_time(self, ms: int) -> None:
+    async def set_time(self, ms: int) -> int:
         if self.time_frame_candle is None:
             pass  # realtime
         else:
             frames = self.time_frame_candle.next(ms)
-            # LOGGER.info('forward %s, count : %d', self.symbol_info.symbol, len(frames))
+            LOGGER.info('forward %s, count : %d', self.symbol_info.symbol, len(frames))
             for frame in frames:
                 for candle in self.candles.values():
                     await candle.update_candle_data(frame)
@@ -72,6 +72,8 @@ class BacktestCandle:
                         self.symbol_info.symbol,
                         frame.to_network()
                     )
+            return len(frames)
+        return 0
 
     def add_stream_data(self, stream: PriceStreamProtocol):
         if self.time_frame_candle is not None:
