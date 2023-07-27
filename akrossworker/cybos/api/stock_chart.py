@@ -243,18 +243,18 @@ def get_kline_by_period(symbol, interval_type, start_time, end_time):
                 break
 
             if interval_type == 'm':
-                end_time = aktime.msec_to_datetime(
+                end_dt = aktime.msec_to_datetime(
                     fetched_start_time - aktime.interval_type_to_msec('d'), 'KRX')
             else:
-                end_time = aktime.msec_to_datetime(fetched_start_time - 1, 'KRX')
+                end_dt = aktime.msec_to_datetime(fetched_start_time - 1, 'KRX')
             
             data = get_period_data_raw(symbol,
                                        interval_type,
-                                       yyyymmdd(end_time - expected_range),
-                                       yyyymmdd_except_holiday(end_time))
+                                       yyyymmdd(end_dt - expected_range),
+                                       yyyymmdd_except_holiday(end_dt))
             # 2023년 5월 29일 주봉 데이터, xxx ~ 28일까지 요청하였을 때, 데이터가 있다고 나오는 문제
             # xxx ~ 28일까지 요청하였지만, 데이터가 시작시간 / 종료 시간이 29일 0:0:0 으로 나오는 예외처리
-            data = list(filter(lambda candle: candle.end_time <= end_time.timestamp() * 1000, data))
+            data = list(filter(lambda candle: candle.end_time <= end_dt.timestamp() * 1000, data))
             
             # print('request cont',
             #       yyyymmdd(end_time - expected_range),
@@ -269,7 +269,7 @@ def get_kline_by_period(symbol, interval_type, start_time, end_time):
                     break
                 else:
                     empty_count += 1
-                    fetched_start_time = (end_time - expected_range).timestamp() * 1000
+                    fetched_start_time = (end_dt - expected_range).timestamp() * 1000
                     continue
             response[:0] = data
             fetched_start_time = response[0].start_time

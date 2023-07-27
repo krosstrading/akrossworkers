@@ -12,7 +12,7 @@ async def main():
     await conn.market_discovery()
     await conn.wait_for_market(MARKET)
     hellos = conn.get_markets(MARKET)
-    cmd, resp = await conn.api_call(hellos[0], 'candle', symbol='a000910', interval='1m')
+    cmd, resp = await conn.api_call(hellos[0], 'candle', symbol='a000910', interval='1m')w
     # print('response',
     #       resp,
     #       datetime.fromtimestamp(int(resp[-1][4] / 1000)),
