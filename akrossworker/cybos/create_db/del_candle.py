@@ -14,7 +14,7 @@ from akrossworker.cybos.api.connection import CybosConnection
 
 
 MONGO_URI = f"mongodb://{quote_plus('akross')}:{quote_plus('Akross@q')}" \
-            "@" + env.get_rmq_url()
+            "@" + env.get_mongo_url()
 LOGGER = logging.getLogger(__name__)
 MARKET_NAME = 'krx.spot'
 
