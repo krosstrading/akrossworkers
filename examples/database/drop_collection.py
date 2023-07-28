@@ -1,5 +1,4 @@
 import asyncio
-from datetime import datetime
 from akrossworker.common.db import Database, DBEnum
 from akrossworker.common.command import ApiCommand
 from akrossworker.common.protocol import SymbolInfo
