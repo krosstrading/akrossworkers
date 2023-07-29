@@ -17,6 +17,9 @@ class ApiCommand:
     Next = 'next'
     Play = 'play'
     Pause = 'pause'
+    DailyInvestorGroup = 'dailyInvetorGroup'
+    DailyProgramTrade = 'dailyProgramTrade'
+    DailyCredit = 'dailyCredit'
 
 
 class AccountApiCommand:

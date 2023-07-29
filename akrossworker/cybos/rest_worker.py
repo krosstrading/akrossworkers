@@ -16,6 +16,7 @@ from akrossworker.cybos.api.connection import CybosConnection
 from akrossworker.cybos.api.daily_credit import get_daily_credit
 from akrossworker.cybos.api.daily_investor_group import get_daily_investor_group
 from akrossworker.cybos.api.daily_program_trade import get_daily_program_trade
+from akrossworker.cybos.api.daily_short_sell import get_daily_short_sell
 from akrossworker.cybos.api.orderbook import get_orderbook
 from akrossworker.cybos.api.orderbook_extended import get_orderbook_extended
 from akrossworker.cybos.api.rank_codes import get_rank_codes
@@ -29,9 +30,10 @@ class CybosRestWorker(RpcHandler):
         super().__init__()
         self.candle = self.on_candle
         self.brokerList = self.on_broker_list
-        self.dailyInvetorGroup = self.on_daily_investor_group
+        self.dailyInvestorGroup = self.on_daily_investor_group
         self.dailyProgramTrade = self.on_daily_program_trade
         self.dailyCredit = self.on_daily_credit
+        self.dailyShortSell = self.on_daily_short_sell
         self.symbolInfo = self.on_symbol_info
         self._symbols = []
         self._market_time = None
@@ -158,6 +160,11 @@ class CybosRestWorker(RpcHandler):
         LOGGER.info('%s', kwargs)
         util.check_required_parameters(kwargs, 'symbol')
         return get_daily_credit(kwargs['symbol'].upper())
+
+    def on_daily_short_sell(self, **kwargs):
+        LOGGER.info('%s', kwargs)
+        util.check_required_parameters(kwargs, 'symbol')
+        return get_daily_short_sell(kwargs['symbol'].upper())
 
     def get_market_type(self) -> str:
         if self._market_time is None:
