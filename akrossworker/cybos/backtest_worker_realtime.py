@@ -97,11 +97,10 @@ class CybosBacktestWorker(RpcBase):
             'targets': kwargs['targets']
         }
 
-        targets = kwargs['targets']
-        if len(targets) == 0:
-            targets = self._symbols.keys()
+        if len(self._timeFrame['targets']) == 0:
+            self._timeFrame['targets'] = self._symbols.keys()
 
-        for target in targets:
+        for target in self._timeFrame['targets']:
             target_name = target.lower()
             if target_name in self._symbols:
                 self._backtestCandle[target_name] = BacktestCandle(
@@ -168,20 +167,26 @@ class CybosBacktestWorker(RpcBase):
             symbol_infos = []
             for symbol in data[0]['symbols']:
                 if symbol in self._symbols:
-                    symbol_infos.append(self._symbols[symbol].symbol_info.to_network())
+                    symbol_infos.append(self._symbols[symbol].to_network())
                 else:
                     LOGGER.warning('symbol not exist on self._symbols %s', symbol)
             return symbol_infos
         return []
 
     async def on_krx_amount_rank(self, **kwargs):
+        from datetime import datetime
+        print('current', datetime.fromtimestamp(self._current_time / 1000))
         if self._current_time == 0:
             return []
         candle_start_time = aktime.get_start_time(self._current_time, 'm', 'KRX')
         candidates = []
 
         for symbol, cache in self._backtestCandle.items():
-            candles = await cache.get_data('1m')
+            candles = cache.get_time_frame_data()
+            print('len candles', len(candles),
+                  'exp start', candle_start_time,
+                  'current start', candles[-1].start_time,
+                  symbol in self._symbols)
             if (len(candles) > 0 and
                     candles[-1].start_time == candle_start_time and
                     symbol in self._symbols):
@@ -231,8 +236,7 @@ class CybosBacktestWorker(RpcBase):
             if len(stream_data) > 0:
                 current_time = aktime.get_msec()
                 current_frametime = stream_data[0].event_time
-                self._current_time = current_frametime
-
+                
                 while len(stream_data) > 0:
                     if self._stream_pause:
                         LOGGER.warning('pause state')
@@ -254,6 +258,7 @@ class CybosBacktestWorker(RpcBase):
                         await asyncio.sleep((frame_timegap - realtime_gap) / 1000)
 
                     current_frametime = stream.event_time
+                    self._current_time = current_frametime
                     current_time = aktime.get_msec()
 
                     if isinstance(stream, PriceStreamProtocol):

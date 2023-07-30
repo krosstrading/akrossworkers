@@ -56,6 +56,9 @@ class RealtimeCandle:
                 result.append(data)
         return result
 
+    def get_raw_candle(self) -> List[PriceCandleProtocol]:
+        return self.data
+
     def _create_new_candle(self, stream: PriceStreamProtocol, is_same_type=True) -> PriceCandleProtocol:
         if is_same_type:
             start_time = aktime.get_start_time(stream.event_time, 'm', 'KRX')

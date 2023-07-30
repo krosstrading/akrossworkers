@@ -55,6 +55,9 @@ class TimeFrameCandle:
         return grouping.get_candle(
             self.data[:self.next_index], self.interval_type, interval)
 
+    def get_raw_candle(self) -> List[PriceCandleProtocol]:
+        return self.data
+
     def get_data_until_now(self, start_time: int) -> List[PriceCandleProtocol]:
         result = []
         for data in self.data[:self.next_index]:
