@@ -40,6 +40,7 @@ def get_candle(
         else:
             result.append(grouped.copy())
             grouped.clear()
+            grouped.append(data)
 
     if len(grouped) > 0:
         result.append(grouped.copy())

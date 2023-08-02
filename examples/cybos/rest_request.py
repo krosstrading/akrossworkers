@@ -1,8 +1,10 @@
 import asyncio
 from datetime import datetime
+from typing import List
 
 from akross.connection.aio.quote_channel import QuoteChannel
-
+from akrossworker.common.grouping import get_candle
+from akrossworker.common.protocol import PriceCandleProtocol
 
 MARKET = 'krx.spot'
 
@@ -12,14 +14,22 @@ async def main():
     await conn.market_discovery()
     await conn.wait_for_market(MARKET)
     hellos = conn.get_markets(MARKET)
-    cmd, resp = await conn.api_call(hellos[0], 'candle', symbol='a000910', interval='1m')
+    cmd, resp = await conn.api_call(hellos[0], 'candle', symbol='a377300', interval='1m')
     # print('response',
     #       resp,
     #       datetime.fromtimestamp(int(resp[-1][4] / 1000)),
     #       datetime.fromtimestamp(int(resp[-1][5] / 1000)))
+    candles: List[PriceCandleProtocol] = []
     for data in resp:
-        print(datetime.fromtimestamp(int(data[4] / 1000)),
-              datetime.fromtimestamp(int(data[5] / 1000)))
+        candles.append(PriceCandleProtocol.ParseNetwork(data))
+
+    candles = get_candle(candles, 'm', 3)
+    for candle in candles:
+        result = PriceCandleProtocol.ParseNetwork(candle)
+        print(datetime.fromtimestamp(int(result.start_time / 1000)))
+    # for data in candles[:-300]:
+    #     print(datetime.fromtimestamp(int(data.start_time / 1000)),
+    #           datetime.fromtimestamp(int(data.end_time / 1000)))
     await asyncio.get_running_loop().create_future()
 
 
