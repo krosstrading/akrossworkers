@@ -81,6 +81,9 @@ class BacktestCandle:
             for candle in self.candles.values():
                 candle.update_stream_data(stream)
 
+    def get_time_frame_data(self):
+        return self.time_frame_candle.get_raw_candle()
+
     async def get_data(self, interval: str):
         interval, interval_type = aktime.interval_dissect(interval)
         # print(self.time_frame_candle is not None, self.time_frame_candle.get_interval_type(), interval_type)
