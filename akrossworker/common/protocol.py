@@ -85,6 +85,9 @@ class PriceCandleProtocol:
     @property
     def start_time(self) -> int:
         return self._start_time
+    
+    def adjust_start_time(self, start_time: int) -> None:
+        self._start_time = start_time
 
     @property
     def end_time(self) -> int:

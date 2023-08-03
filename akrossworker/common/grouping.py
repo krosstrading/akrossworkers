@@ -24,15 +24,21 @@ def _can_grouping(
 def get_candle(
     candles: List[PriceCandleProtocol],
     interval_type: str,
-    interval: int
+    interval: int,
+    as_network: bool = True
 ) -> list:
     if len(candles) == 0 or interval < 1:
         return []
 
     result = []
+    interval_len = aktime.interval_type_to_msec(interval_type) * interval
     grouped: List[PriceCandleProtocol] = []
     for data in candles:
         if len(grouped) == 0 or _can_grouping(interval, interval_type, grouped[0], data):
+            if (interval_type == 'm' or interval_type == 'h') and len(grouped) == 0:
+                if data.start_time % interval_len != 0:
+                    data.adjust_start_time(data.start_time - (data.start_time % interval_len))
+
             grouped.append(data)
             if len(grouped) % interval == 0:
                 result.append(grouped.copy())
@@ -40,6 +46,9 @@ def get_candle(
         else:
             result.append(grouped.copy())
             grouped.clear()
+            if (interval_type == 'm' or interval_type == 'h') and len(grouped) == 0:
+                if data.start_time % interval_len != 0:
+                    data.adjust_start_time(data.start_time - (data.start_time % interval_len))
             grouped.append(data)
 
     if len(grouped) > 0:
@@ -54,5 +63,8 @@ def get_candle(
             else:
                 current = current.merge(candle)
         if current is not None:
-            arr.append(current.to_network())
+            if as_network:
+                arr.append(current.to_network())
+            else:
+                arr.append(current)
     return arr
