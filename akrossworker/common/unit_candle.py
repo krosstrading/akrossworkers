@@ -144,15 +144,6 @@ class UnitCandle:
         if len(self.data) > self.get_limit_count():
             self.data = self.data[-self.get_limit_count():]
 
-        # DB 에 넣는 거는 향후 고려
-        # if len(self.data) > 1 and self.data[-2].end_time > self.db_last_record:
-        #     self.db_last_record = self.data[-2].end_time
-        #     await self.db.insert_one(self.db_name, col, self.data[-2].to_database())
-        #     LOGGER.info('%s db new candle insert (candle last:%s), (db last:%s)',
-        #                 col,
-        #                 datetime.fromtimestamp(int(self.data[-2].end_time / 1000)),
-        #                 datetime.fromtimestamp(int(self.db_last_record / 1000)))
-
     def _is_apply_extended(self):
         if self.interval_type == 'm' or self.interval_type == 'h':
             return True

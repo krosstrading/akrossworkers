@@ -33,6 +33,7 @@ class CybosRestCache(RpcBase):
         self.search = self.on_search
         self.krxRank = self.on_krx_rank_symbols
         self.krxAmountRank = self.on_krx_amount_rank
+        self.krxVolatilityRank = self.on_krx_volatility_rank
 
         self._worker: Market = None
         self._symbols: Dict[str, CandleCache] = {}
@@ -137,6 +138,11 @@ class CybosRestCache(RpcBase):
         candidates.sort(key=lambda candidate: candidate['ratio'], reverse=True)
         candidates = candidates[:15]
         return [candidate['symbol_info'].to_network() for candidate in candidates]
+
+    async def on_krx_volatility_rank(self, **kwargs):
+        for symbol, cache in self._symbols.items():
+            pass
+        return []
 
     async def on_symbol_info(self, **kwargs):
         result = []

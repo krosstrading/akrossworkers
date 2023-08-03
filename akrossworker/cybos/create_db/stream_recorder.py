@@ -26,6 +26,7 @@ MONGO_URI = f"mongodb://{quote_plus(env.get_mongo_user())}:{quote_plus(env.get_m
 class StreamWriter:
     Price = 0
     Orderbook = 1
+    Program = 2
 
     def __init__(self, db_collection):
         self.db = db_collection
@@ -38,6 +39,9 @@ class StreamWriter:
 
     async def add_orderbook_stream(self, symbol: str, data):
         self.queue.put_nowait((StreamWriter.Orderbook, symbol.lower(), data))
+
+    async def add_program_stream(self, symbol: str, data):
+        self.queue.put_nowait((StreamWriter.Program, symbol.lower(), data))
 
     async def write_price_streams(self, symbol: str, data):
         LOGGER.debug('write price streams %s(len:%d), queue left: %d',
@@ -59,9 +63,20 @@ class StreamWriter:
             sys.exit(0)
         LOGGER.debug('write orderbook done')
 
+    async def write_program_streams(self, symbol: str, data):
+        LOGGER.debug('write program streams %s(len:%d) queue left: %d',
+                     symbol, len(data), self.queue.qsize())
+        try:
+            self.db['r_' + symbol].insert_many(data)
+        except Exception as e:
+            LOGGER.warning('write program error %s, %s', symbol, str(e))
+            sys.exit(0)
+        LOGGER.debug('write program done')
+
     async def start_loop(self):
         price_streams: Dict[str, List[int, List]] = {}   # key: symbol, value: (count, streams[])
         orderbook_streams: Dict[str, List[int, List]] = {}
+        program_streams: Dict[str, List[int, List]] = {}
         last_process_time = aktime.get_msec()
         while True:
             try:
@@ -93,6 +108,16 @@ class StreamWriter:
                             await self.write_orderbook_streams(symbol, orderbook_streams[symbol][1])
                             orderbook_streams[symbol][1].clear()
                             del orderbook_streams[symbol]
+                elif data_type == StreamWriter.Program:
+                    if symbol not in program_streams:
+                        program_streams[symbol] = [1, [data]]
+                    else:
+                        program_streams[symbol][0] += 1
+                        program_streams[symbol][1].append(data)
+                        if program_streams[symbol][0] >= 1000:
+                            await self.write_program_streams(symbol, program_streams[symbol][1])
+                            program_streams[symbol][1].clear()
+                            del program_streams[symbol]
             else:
                 if aktime.get_msec() - last_process_time > 1000 * 60 * 10:
                     last_process_time = aktime.get_msec()
@@ -107,6 +132,12 @@ class StreamWriter:
                             await self.write_orderbook_streams(symbol, value[1])
                             value[1].clear()
                     orderbook_streams.clear()
+
+                    for symbol, value in program_streams.items():
+                        if len(value[1]) > 0:
+                            await self.write_program_streams(symbol, value[1])
+                            value[1].clear()
+                    program_streams.clear()
                 else:
                     await asyncio.sleep(1)
 
@@ -138,6 +169,13 @@ class SymbolSubscriber:
                 self.orderbook_stream_arrived,
                 target=self.symbol
             )
+        if self.symbol == 'a086520':
+            await self.quote.subscribe_stream(
+                self.market,
+                ApiCommand.ProgramStream,
+                self.program_stream_arrived,
+                target=self.symbol
+            )
 
     async def orderbook_stream_arrived(self, msg):
         await self.writer.add_orderbook_stream(self.symbol, msg)
@@ -145,6 +183,9 @@ class SymbolSubscriber:
     async def price_stream_arrived(self, msg):
         await self.writer.add_price_stream(self.symbol,
                                            PriceStreamProtocol.ParseNetwork(msg).to_database())
+
+    async def program_stream_arrived(self, msg):
+        await self.writer.add_program_stream(self.symbol, msg)
 
 
 class Collector:
