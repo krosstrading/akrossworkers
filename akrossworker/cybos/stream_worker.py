@@ -43,6 +43,7 @@ class CybosStreamWorker(RpcHandler):
         # APIs
         self.priceStream = self.on_price_stream
         self.orderbookStream = self.on_orderbook_stream
+        self.programStream = self.on_program_stream
 
     def preload(self):
         for code in stock_code.get_kospi_company_code_list():
@@ -75,6 +76,15 @@ class CybosStreamWorker(RpcHandler):
             kwargs['target'],
             kwargs['exchange'],
             ApiCommand.OrderbookStream,
+            False
+        )
+
+    def on_program_stream(self, **kwargs):
+        util.check_required_parameters(kwargs, 'exchange', 'target')
+        self._handle_realtime_request(
+            kwargs['target'],
+            kwargs['exchange'],
+            ApiCommand.ProgramStream,
             False
         )
 
