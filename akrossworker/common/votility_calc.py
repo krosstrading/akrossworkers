@@ -23,7 +23,9 @@ class VolatilityCalculator:
     def is_under_mean(self, current_price: int):
         if len(self.low_highs) == 0:
             return False
-        return np.mean(self.low_highs) > current_price
+        high = max(self.low_highs)
+        low = min(self.low_highs)
+        return (current_price - low) / (high - low) < 0.5
     
     def get_coefficient_variation(self) -> float:
         if len(self.low_highs) == 0:
