@@ -136,6 +136,7 @@ class UnitCandle:
                     if candle.start_time <= now <= candle.end_time and now < krx_start_time:
                         continue
                 self.data.append(candle)
+                self.last_price = float(candle.price_close)
                 if self.volatility_calculator is not None:
                     self.volatility_calculator.add_complete_candle(candle)
         else:
