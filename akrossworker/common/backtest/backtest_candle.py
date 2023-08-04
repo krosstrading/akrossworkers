@@ -41,6 +41,7 @@ class BacktestCandle:
         self.symbol_info = symbol_info
         self.current_time = start_time
         self.candles: Dict[str, BacktestUnitCandle] = {}
+        self.time_frame = time_frame
         self.time_frame_candle = None
         self.exchange = exchange
         if len(time_frame) > 0:
@@ -83,6 +84,18 @@ class BacktestCandle:
 
     def get_time_frame_data(self):
         return self.time_frame_candle.get_raw_candle()
+
+    def get_coefficient_variation(self) -> float:
+        if self.time_frame != 'r':
+            return 0
+
+        min_unit_candle = self.time_frame_candle
+        price = min_unit_candle.get_last_price()
+        volatility_calc = min_unit_candle.get_volatility_calc()
+        if price > 0 and volatility_calc is not None:
+            if volatility_calc.is_under_mean(price):
+                return volatility_calc.get_coefficient_variation()
+        return 0
 
     async def get_data(self, interval: str):
         interval, interval_type = aktime.interval_dissect(interval)

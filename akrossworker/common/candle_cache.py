@@ -32,6 +32,15 @@ class CandleCache:
                 self.symbol_info, interval_type
             )
 
+    def get_coefficient_variation(self) -> float:
+        min_unit_candle = self.candles['m']
+        price = min_unit_candle.get_last_price()
+        volatility_calc = min_unit_candle.get_volatility_calc()
+        if price > 0 and volatility_calc is not None:
+            if volatility_calc.is_under_mean(price):
+                return volatility_calc.get_coefficient_variation()
+        return 0
+
     def get_data(self, interval: str):
         interval, interval_type = aktime.interval_dissect(interval)
 

@@ -39,8 +39,8 @@ class CybosBacktestWorker(RpcBase):
         self.next = self.on_next
         self.setSpeed = self.on_set_speed
         self.pause = self.on_pause
-        self.krxRank = self.on_krx_rank_symbols
-        self.krxAmountRank = self.on_krx_amount_rank
+        self.krxPick = self.on_krx_pick
+        self.krxMomentRank = self.on_krx_moment_rank
 
         self._worker: Market = None
         self._timeFrame = None
@@ -156,24 +156,21 @@ class CybosBacktestWorker(RpcBase):
             return await self._backtestCandle[symbol].get_data(interval)
         return []
 
-    async def on_krx_rank_symbols(self, **kwargs):
-        util.check_required_parameters(kwargs, 'searchDate')
-        search_time = aktime.get_start_time(kwargs['searchDate'], 'd', 'KRX')
-        data = await self._db.get_data(DBEnum.KRX_HAS_PROFIT_DB, 'ranks', {
-            'startTime': {'$gte': search_time},
-            'endTime': {'$lte': search_time + aktime.interval_type_to_msec('d') - 1}
-        })
-        if len(data) == 1:
-            symbol_infos = []
-            for symbol in data[0]['symbols']:
-                if symbol in self._symbols:
-                    symbol_infos.append(self._symbols[symbol].to_network())
-                else:
-                    LOGGER.warning('symbol not exist on self._symbols %s', symbol)
-            return symbol_infos
-        return []
+    async def on_krx_pick(self, **kwargs):
+        candidates = []
 
-    async def on_krx_amount_rank(self, **kwargs):
+        for symbol, cache in self._backtestCandle.items():
+            cov = cache.get_coefficient_variation()
+            if symbol in self._symbols and cov > 0:
+                candidates.append({
+                    'symbol_info': self._symbols[symbol],
+                    'cov': cov
+                })
+        candidates.sort(key=lambda candidate: candidate['cov'], reverse=True)
+        candidates = candidates[:15]
+        return [candidate['symbol_info'].to_network() for candidate in candidates]
+
+    async def on_krx_moment_rank(self, **kwargs):
         from datetime import datetime
         print('current', datetime.fromtimestamp(self._current_time / 1000))
         if self._current_time == 0:
@@ -183,10 +180,10 @@ class CybosBacktestWorker(RpcBase):
 
         for symbol, cache in self._backtestCandle.items():
             candles = cache.get_time_frame_data()
-            print('len candles', len(candles),
-                  'exp start', candle_start_time,
-                  'current start', candles[-1].start_time,
-                  symbol in self._symbols)
+            # print('len candles', len(candles),
+            #       'exp start', candle_start_time,
+            #       'current start', candles[-1].start_time,
+            #       symbol in self._symbols)
             if (len(candles) > 0 and
                     candles[-1].start_time == candle_start_time and
                     symbol in self._symbols):

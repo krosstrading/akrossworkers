@@ -14,6 +14,7 @@ from akrossworker.common.protocol import (
     PriceStreamProtocol,
     SymbolInfo
 )
+from akrossworker.common.votility_calc import VolatilityCalculator
 
 LOGGER = logging.getLogger(__name__)
 
@@ -35,15 +36,23 @@ class RealtimeCandle:
         self.db_name = db_name
         self.interval_type = 'm'
         self.fetch_done = False
+        self.last_price = 0
         self.data: List[PriceCandleProtocol] = []
         self.start_time = start_time
+        self.volatility_calculator = VolatilityCalculator(start_time)
 
     def get_db_start_search(self) -> int:
         return aktime.get_msec_before_day(
             CandleLimitDays.get_limit_days(self.interval_type), self.start_time)
 
+    def get_volatility_calc(self) -> VolatilityCalculator:
+        return self.volatility_calculator
+
     def get_interval_type(self) -> str:
         return self.interval_type
+
+    def get_last_price(self) -> float:
+        return self.last_price
 
     def get_data(self, interval: int) -> list:
         return grouping.get_candle(
@@ -64,7 +73,10 @@ class RealtimeCandle:
             start_time = aktime.get_start_time(stream.event_time, 'm', 'KRX')
         else:
             start_time = stream.event_time
-            
+        
+        if len(self.data) > 0:
+            self.volatility_calculator.add_complete_candle(self.data[-1])
+
         end_time = aktime.get_start_time(stream.event_time, 'm', 'KRX') + aktime.interval_type_to_msec('m') - 1
         return PriceCandleProtocol(
             int(stream.price), int(stream.price), int(stream.price), int(stream.price),
@@ -72,6 +84,7 @@ class RealtimeCandle:
             int(stream.volume), int(stream.volume) * int(stream.price), stream.time_type, False)
 
     def add_stream(self, stream: PriceStreamProtocol):
+        self.last_price = float(stream.price)
         if len(self.data) == 0:
             self.data.append(self._create_new_candle(stream))
         else:

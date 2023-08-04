@@ -31,9 +31,8 @@ class CybosRestCache(RpcBase):
         self.symbolInfo = self.on_symbol_info
         self.orderbook = self.on_orderbook
         self.search = self.on_search
-        self.krxRank = self.on_krx_rank_symbols
-        self.krxAmountRank = self.on_krx_amount_rank
-        self.krxVolatilityRank = self.on_krx_volatility_rank
+        self.krxMomentRank = self.on_krx_moment_rank
+        self.krxPick = self.on_krx_pick
 
         self._worker: Market = None
         self._symbols: Dict[str, CandleCache] = {}
@@ -96,26 +95,8 @@ class CybosRestCache(RpcBase):
         if symbol in self._symbols:
             return self._symbols[symbol].get_data(interval)
         return []
-
-    async def on_krx_rank_symbols(self, **kwargs):
-        util.check_required_parameters(kwargs, 'searchDate')
-        search_time = aktime.get_start_time(kwargs['searchDate'], 'd', 'KRX')
-        LOGGER.warning('search date %s', datetime.fromtimestamp(search_time / 1000))
-        data = await self._db.get_data(DBEnum.KRX_HAS_PROFIT_DB, 'ranks', {
-            'startTime': {'$gte': search_time},
-            'endTime': {'$lte': search_time + aktime.interval_type_to_msec('d') - 1}
-        })
-        if len(data) == 1:
-            symbol_infos = []
-            for symbol in data[0]['symbols']:
-                if symbol in self._symbols:
-                    symbol_infos.append(self._symbols[symbol].symbol_info.to_network())
-                else:
-                    LOGGER.warning('symbol not exist on self._symbols %s', symbol)
-            return symbol_infos
-        return []
     
-    async def on_krx_amount_rank(self, **kwargs):
+    async def on_krx_moment_rank(self, **kwargs):
         candle_start_time = aktime.get_start_time(aktime.get_msec(), 'm', 'KRX')
         candidates = []
 
@@ -139,10 +120,17 @@ class CybosRestCache(RpcBase):
         candidates = candidates[:15]
         return [candidate['symbol_info'].to_network() for candidate in candidates]
 
-    async def on_krx_volatility_rank(self, **kwargs):
+    async def on_krx_pick(self, **kwargs):
+        candidates = []
         for symbol, cache in self._symbols.items():
-            pass
-        return []
+            if symbol in self._symbol_info_cache and cache.get_coefficient_variation() > 0:
+                candidates.append({
+                    'symbol_info': self._symbol_info_cache[symbol],
+                    'cov': cache.get_coefficient_variation()
+                })
+        candidates.sort(key=lambda candidate: candidate['cov'], reverse=True)
+        candidates = candidates[:15]
+        return [candidate['symbol_info'].to_network() for candidate in candidates]
 
     async def on_symbol_info(self, **kwargs):
         result = []

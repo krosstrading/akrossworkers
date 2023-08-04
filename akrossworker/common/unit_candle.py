@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 from akross.connection.aio.quote_channel import QuoteChannel, Market
@@ -18,6 +18,7 @@ from akrossworker.common.protocol import (
     PriceStreamProtocol,
     SymbolInfo
 )
+from akrossworker.common.votility_calc import VolatilityCalculator
 
 
 LOGGER = logging.getLogger(__name__)
@@ -41,7 +42,17 @@ class UnitCandle:
         self.interval_type = interval_type
         self.fetch_done = False
         self.data: List[PriceCandleProtocol] = []
-        self.db_last_record = 0
+        self.last_price = 0
+        if self.interval_type == 'm':
+            self.volatility_calculator = VolatilityCalculator(aktime.get_msec())
+        else:
+            self.volatility_calculator = None
+
+    def get_volatility_calc(self) -> Optional[VolatilityCalculator]:
+        return self.volatility_calculator
+
+    def get_last_price(self) -> float:
+        return self.last_price
 
     def get_start_time(self, ms: int, last_start: int) -> int:
         start_time = aktime.get_start_time(ms, self.interval_type, self.symbol_info.tz)
@@ -78,6 +89,7 @@ class UnitCandle:
         """
         check when extended time and normal time mixed
         """
+        db_last_record = 0
         col = self.symbol_info.symbol.lower() + '_1' + self.interval_type
         # LOGGER.info('%s', col)
         now = aktime.get_msec()
@@ -101,7 +113,7 @@ class UnitCandle:
                         col, datetime.fromtimestamp(int(self.data[-1].end_time / 1000)))
             query['startTime'] = self.data[-1].end_time + 1
             query['endTime'] = now
-            self.db_last_record = self.data[-1].end_time
+            db_last_record = self.data[-1].end_time
         else:
             pass
 
@@ -112,7 +124,7 @@ class UnitCandle:
             LOGGER.info('api query %s, data len(%d)', query, len(resp))
             for data in resp:
                 candle = PriceCandleProtocol.ParseNetwork(data)
-                if candle.start_time <= self.db_last_record:
+                if candle.start_time <= db_last_record:
                     LOGGER.warning('skip data')
                     continue
                 elif self.interval_type == 'd':
@@ -124,6 +136,8 @@ class UnitCandle:
                     if candle.start_time <= now <= candle.end_time and now < krx_start_time:
                         continue
                 self.data.append(candle)
+                if self.volatility_calculator is not None:
+                    self.volatility_calculator.add_complete_candle(candle)
         else:
             LOGGER.error('fetch error(%s) interval:%s',
                          self.symbol_info.symbol, self.interval_type)
@@ -133,6 +147,9 @@ class UnitCandle:
         # col = self.symbol_info.symbol.lower() + '_1' + self.interval_type
         start_time = self.get_start_time(s.event_time, last_start)
         end_time = self.get_end_time(start_time)
+
+        if self.volatility_calculator is not None and len(self.data) > 0:
+            self.volatility_calculator.add_complete_candle(self.data[-1])
 
         self.data.append(PriceCandleProtocol.CreatePriceCandle(
             s.price, s.price, s.price, s.price,
@@ -154,6 +171,7 @@ class UnitCandle:
             return
 
         s = PriceStreamProtocol.ParseNetwork(stream)
+        self.last_price = float(s.price)
         if not self._is_apply_extended() and s.time_type != TickTimeType.Normal:
             return
         elif len(self.data) == 0:
