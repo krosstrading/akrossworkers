@@ -25,7 +25,9 @@ class VolatilityCalculator:
             return False
         high = max(self.low_highs)
         low = min(self.low_highs)
-        return (current_price - low) / (high - low) < 0.5
+        if high - low > 0:
+            return (current_price - low) / (high - low) < 0.5
+        return False
     
     def get_coefficient_variation(self) -> float:
         if len(self.low_highs) == 0:
