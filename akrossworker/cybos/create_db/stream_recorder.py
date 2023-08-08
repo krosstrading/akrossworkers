@@ -169,7 +169,6 @@ class SymbolSubscriber:
                 self.orderbook_stream_arrived,
                 target=self.symbol
             )
-        if self.symbol == 'a086520':
             await self.quote.subscribe_stream(
                 self.market,
                 ApiCommand.ProgramStream,
