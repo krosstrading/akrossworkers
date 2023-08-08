@@ -3,8 +3,8 @@ import asyncio
 import logging
 from urllib.parse import quote_plus
 
-import akross
 from akross.common import env
+from akross.common import aktime
 
 from akrossworker.common.db import DBEnum
 from akrossworker.cybos.krxinfo.common import KrxTaskEnum
@@ -47,7 +47,7 @@ class TaskDatabase:
                     'task_name': task_name,
                     'intdate': intdate,
                     'target': target.lower(),
-                    'time': akross.get_msec()
+                    'time': aktime.get_msec()
                 }
             },
             upsert=True
