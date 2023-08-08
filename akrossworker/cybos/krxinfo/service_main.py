@@ -108,8 +108,9 @@ class KrxService:
             if is_daily_check_time():
                 now = datetime.now()
                 LOGGER.info('triggered %s', target_intdate)
-                for symbol in self.symbols.values():
-                    await symbol.do_daily_task(
+                symbol_id_keys = self.symbols.keys()
+                for symbol_id in symbol_id_keys:
+                    await self.symbols[symbol_id].do_daily_task(
                         target_intdate, False)
                     await asyncio.sleep(0.2)
                 LOGGER.info('done took(%f)',
@@ -119,6 +120,10 @@ class KrxService:
 
     async def check_symbols(self):
         while True:
+            if self.initial_done and not is_daily_check_time():
+                await asyncio.sleep(KrxService.CHECK_SYMBOL_INTERVAL)
+                continue
+
             _, resp = await self.quote.api_call(
                 self.market,
                 ApiCommand.SymbolInfo, cache=False)
