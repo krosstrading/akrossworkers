@@ -129,6 +129,8 @@ class KrxService:
             for symbol_info in krx_symbols:
                 if symbol_info.status.lower() != args.TradingStatus.Trading:
                     continue
+                elif symbol_info.symbol.lower() != 'a':
+                    continue
 
                 symbol_id = get_symbol_id(symbol_info)
                 if symbol_id not in self.symbols:
