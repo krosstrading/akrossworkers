@@ -20,6 +20,8 @@ class ApiCommand:
     DailyInvestorGroup = 'dailyInvetorGroup'
     DailyProgramTrade = 'dailyProgramTrade'
     DailyCredit = 'dailyCredit'
+    DailyShortSell = 'dailyShortSell'
+    DailyBroker = 'dailyBroker'
 
 
 class AccountApiCommand:

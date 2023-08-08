@@ -13,6 +13,7 @@ from akrossworker.common.args_constants import (
 from akrossworker.cybos.api import stock_chart, stock_code
 from akrossworker.common.protocol import SymbolInfo
 from akrossworker.cybos.api.connection import CybosConnection
+from akrossworker.cybos.api.daily_broker_trade import get_daily_broker_trade
 from akrossworker.cybos.api.daily_credit import get_daily_credit
 from akrossworker.cybos.api.daily_investor_group import get_daily_investor_group
 from akrossworker.cybos.api.daily_program_trade import get_daily_program_trade
@@ -34,6 +35,7 @@ class CybosRestWorker(RpcHandler):
         self.dailyProgramTrade = self.on_daily_program_trade
         self.dailyCredit = self.on_daily_credit
         self.dailyShortSell = self.on_daily_short_sell
+        self.dailyBroker = self.on_daily_broker
         self.symbolInfo = self.on_symbol_info
         self._symbols = []
         self._market_time = None
@@ -165,6 +167,11 @@ class CybosRestWorker(RpcHandler):
         LOGGER.info('%s', kwargs)
         util.check_required_parameters(kwargs, 'symbol')
         return get_daily_short_sell(kwargs['symbol'].upper())
+
+    def on_daily_broker(self, **kwargs):
+        LOGGER.info('%s', kwargs)
+        util.check_required_parameters(kwargs, 'symbol')
+        return get_daily_broker_trade(kwargs['symbol'].upper())
 
     def get_market_type(self) -> str:
         if self._market_time is None:
