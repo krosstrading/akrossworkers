@@ -134,7 +134,7 @@ class KrxService:
             for symbol_info in krx_symbols:
                 if symbol_info.status.lower() != args.TradingStatus.Trading:
                     continue
-                elif symbol_info.symbol.lower() != 'a':
+                elif symbol_info.symbol[0].lower() != 'a':
                     continue
 
                 symbol_id = get_symbol_id(symbol_info)
@@ -149,6 +149,7 @@ class KrxService:
 
             if not self.initial_done and len(self.symbols) > 0:
                 self.initial_done = True
+                LOGGER.warning('set initial done')
             await asyncio.sleep(KrxService.CHECK_SYMBOL_INTERVAL)
 
 
