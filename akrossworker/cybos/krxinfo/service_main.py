@@ -98,6 +98,7 @@ class KrxService:
         asyncio.create_task(self.do_daily_task())
 
     async def do_daily_task(self):
+        prev_done_date = ''
         while True:
             # get daily task list from database
             if not self.initial_done:
@@ -105,7 +106,7 @@ class KrxService:
                 continue
 
             target_intdate = get_daily_intdate()
-            if is_daily_check_time():
+            if is_daily_check_time() and prev_done_date != target_intdate:
                 now = datetime.now()
                 LOGGER.info('triggered %s', target_intdate)
                 symbol_id_keys = self.symbols.keys()
@@ -115,6 +116,7 @@ class KrxService:
                     await asyncio.sleep(0.2)
                 LOGGER.info('done took(%f)',
                             (datetime.now() - now).total_seconds())
+                prev_done_date = target_intdate
                 await self.db.delete_out_date(target_intdate)
             await asyncio.sleep(60 * 10)
 
