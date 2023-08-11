@@ -109,7 +109,7 @@ class KrxService:
             if is_daily_check_time() and prev_done_date != target_intdate:
                 now = datetime.now()
                 LOGGER.info('triggered %s', target_intdate)
-                symbol_id_keys = self.symbols.keys()
+                symbol_id_keys = list(self.symbols.keys())
                 for symbol_id in symbol_id_keys:
                     await self.symbols[symbol_id].do_daily_task(
                         target_intdate, False)
