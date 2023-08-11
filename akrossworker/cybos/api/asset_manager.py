@@ -323,7 +323,7 @@ class AssetManager:
         
         asset = self.assets[symbol]
         total_qty = int(asset.free) + qty
-        asset_amount = int(asset.free) * int(asset.buyestimated)
+        asset_amount = float(asset.free) * float(asset.buyestimated)
         asset.free = str(total_qty)
         amount = price * qty
         amount_after_tax = amount + (amount * TAX_RATE)  # 실제 가격보다 세금만큼 높게 산 가격
