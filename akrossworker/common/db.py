@@ -23,6 +23,7 @@ class DBEnum(str, Enum):
     KRX_AMOUNT_RANKING_DB = 'krx_amount_rank'
     KRX_HAS_PROFIT_DB = 'krx_has_profit'
     BINANCE_QUOTE_DB = 'binance_quote'
+    FAVORITE_DB = 'favorite'
 
 
 class Database:
@@ -78,6 +79,11 @@ class Database:
             db = self.client[db_name]
             return await db[collection_name].delete_many(query)
         return None
+
+    async def upsert_data(self, db_name: str, collection_name: str, query: dict, data) -> None:
+        if await self.connected():
+            db = self.client[db_name]
+            await db[collection_name].update_one(query, {'$set': data}, upsert=True)
 
     async def insert_one(self, db_name: str, collection_name: str, data) -> None:
         if await self.connected():

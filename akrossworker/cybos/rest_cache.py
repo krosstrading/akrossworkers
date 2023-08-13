@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import sys
-from typing import Dict
+from typing import Dict, List
 
 from akross.common import aktime
 
@@ -22,6 +22,7 @@ from datetime import datetime
 
 LOGGER = logging.getLogger(__name__)
 MARKET_NAME = 'krx.spot'
+FAVORITE_COLLECTION = 'favorite'
 
 
 class CybosRestCache(RpcBase):
@@ -33,6 +34,8 @@ class CybosRestCache(RpcBase):
         self.search = self.on_search
         self.krxMomentRank = self.on_krx_moment_rank
         self.krxPick = self.on_krx_pick
+        self.favorite = self.on_favorite
+        self.setFavorite = self.on_set_favorite
 
         self._worker: Market = None
         self._symbols: Dict[str, CandleCache] = {}
@@ -137,6 +140,30 @@ class CybosRestCache(RpcBase):
         for symbol in self._symbols.values():
             result.append(symbol.get_symbol_info().to_network())
         return result
+
+    async def on_favorite(self, **kwargs):
+        util.check_required_parameters(kwargs, 'user')
+        data = await self._db.find_one(
+            DBEnum.FAVORITE_DB,
+            FAVORITE_COLLECTION,
+            {'user': kwargs['user']})
+        symbol_infos: List[SymbolInfo] = []
+        if 'symbols' in data:
+            symbols = data['symbols']
+            for symbol in symbols:
+                if symbol.lower() in self._symbols:
+                    symbol_infos.append(self._symbols[symbol.lower()])
+        return symbol_infos
+
+    async def on_set_favorite(self, **kwargs):
+        util.check_required_parameters(kwargs, 'symbols', 'user')
+        await self._db.upsert_data(
+            DBEnum.FAVORITE_DB,
+            FAVORITE_COLLECTION,
+            {'user': kwargs['user']},
+            {'symbols': kwargs['symbols']}
+        )
+        return {}
 
     async def on_search(self, **kwargs):
         LOGGER.info(
