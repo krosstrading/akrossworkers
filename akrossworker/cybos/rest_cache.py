@@ -149,10 +149,7 @@ class CybosRestCache(RpcBase):
             {'user': kwargs['user']})
         symbol_infos: List[SymbolInfo] = []
         if data is not None and 'symbols' in data:
-            symbols = data['symbols']
-            for symbol in symbols:
-                if symbol.lower() in self._symbols:
-                    symbol_infos.append(self._symbols[symbol.lower()])
+            symbol_infos = data['symbols']
         return symbol_infos
 
     async def on_set_favorite(self, **kwargs):
