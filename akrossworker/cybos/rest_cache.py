@@ -148,7 +148,7 @@ class CybosRestCache(RpcBase):
             FAVORITE_COLLECTION,
             {'user': kwargs['user']})
         symbol_infos: List[SymbolInfo] = []
-        if 'symbols' in data:
+        if data is not None and 'symbols' in data:
             symbols = data['symbols']
             for symbol in symbols:
                 if symbol.lower() in self._symbols:
