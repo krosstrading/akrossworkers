@@ -287,6 +287,9 @@ class AssetManager:
         self.assets[KRW].free = str(free - amount)
         self.assets[KRW].locked = str(locked + amount)
 
+    def set_balance(self, amount: int):
+        self.assets[KRW].free = str(amount)
+
     def subtract_free_balance(self, amount: int):
         free = int(self.assets[KRW].free)
         self.assets[KRW].free = str(free - amount)

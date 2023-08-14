@@ -40,6 +40,7 @@ class CybosAccountWorker(RpcHandler):
         self.createOrder = self.on_create_order
         self.cancelOrder = self.on_cancel_order
         self.openOrder = self.on_open_order
+        self.refreshBalance = self.on_refresh_balance
         self.discovery = self.on_discovery
         self._conn: AccountChannel = None
         self._asset_manager: AssetManager = None
@@ -123,6 +124,14 @@ class CybosAccountWorker(RpcHandler):
     def on_asset_list(self, **kwargs):
         LOGGER.warning('')
         return self._asset_manager.get_hold_assets()
+
+    def on_refresh_balance(self, **kwargs):
+        free_balance = balance.get_balance(
+            self._account.get_account_number(), self._account.get_account_type())
+        self._asset_manager.set_balance(free_balance)
+        assets = self._asset_manager.get_hold_assets()
+        self._conn.send_event(AccountApiCommand.AssetEvent, assets)
+        return {}
 
     def on_create_order(self, **kwargs):
         util.check_required_parameters(
