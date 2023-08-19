@@ -23,6 +23,7 @@ from datetime import datetime
 LOGGER = logging.getLogger(__name__)
 MARKET_NAME = 'krx.spot'
 FAVORITE_COLLECTION = 'favorite'
+GROUP_COLLECTION = 'group'
 
 
 class CybosRestCache(RpcBase):
@@ -36,6 +37,8 @@ class CybosRestCache(RpcBase):
         self.krxPick = self.on_krx_pick
         self.favorite = self.on_favorite
         self.setFavorite = self.on_set_favorite
+        self.group = self.on_group
+        self.set_group = self.on_set_group
 
         self._worker: Market = None
         self._symbols: Dict[str, CandleCache] = {}
@@ -101,21 +104,33 @@ class CybosRestCache(RpcBase):
     
     async def on_krx_moment_rank(self, **kwargs):
         candle_start_time = aktime.get_start_time(aktime.get_msec(), 'm', 'KRX')
+        today_start_time = aktime.get_start_time(aktime.get_msec(), 'd', 'KRX')
         candidates = []
 
         for symbol, cache in self._symbols.items():
             candles = cache.get_interval_type_data('m')
-            if (len(candles) > 0 and
+            day_candles = cache.get_interval_type_data('d')
+            if (
+                    len(day_candles) > 1 and
+                    len(candles) > 0 and
                     candles[-1].start_time == candle_start_time and
                     symbol in self._symbol_info_cache):
                 try:
+                    yclose = 0
+                    if today_start_time == day_candles[-1].start_time:
+                        yclose = int(day_candles[-2].price_close)
+                    else:
+                        yclose = int(day_candles[-1].price_close)
+                    tclose = int(candles[-1].price_close)
                     amount = int(candles[-1].quote_asset_volume)
                     market_cap = int(self._symbol_info_cache[symbol].market_cap)
                 except Exception:
                     continue
 
-                if market_cap <= 0:
+                if market_cap <= 0 or yclose == 0:
                     continue
+                # elif (tclose / yclose - 1) * 100 > 10:
+                #     continue
                 ratio = amount / market_cap
                 candidates.append({'symbol_info': self._symbol_info_cache[symbol],
                                    'ratio': ratio})
@@ -151,6 +166,12 @@ class CybosRestCache(RpcBase):
         if data is not None and 'symbols' in data:
             symbol_infos = data['symbols']
         return symbol_infos
+
+    async def on_group(self, **kwargs):
+        return []
+
+    async def on_set_group(self, **kwargs):
+        return {}
 
     async def on_set_favorite(self, **kwargs):
         util.check_required_parameters(kwargs, 'symbols', 'user')

@@ -85,7 +85,7 @@ class CybosBacktestWorker(RpcBase):
     
     async def on_create_backtest(self, **kwargs):
         # remove all datas existing
-        util.check_required_parameters(kwargs, 'backtest', 'startTime', 'endTime', 'targets')
+        util.check_required_parameters(kwargs, 'backtest', 'startTime', 'endTime', 'targets', 'timeFrame')
         await self.on_finish_backtest()
         self._current_time = 0
         self._stream_speed = 1
@@ -94,7 +94,8 @@ class CybosBacktestWorker(RpcBase):
             'start': kwargs['startTime'],
             'end': kwargs['endTime'],
             'current': kwargs['startTime'],
-            'targets': kwargs['targets']
+            'targets': kwargs['targets'],
+            'timeFrame': kwargs['timeFrame']
         }
 
         if len(self._timeFrame['targets']) == 0:
@@ -117,6 +118,9 @@ class CybosBacktestWorker(RpcBase):
         return {}
 
     async def on_play(self, **kwargs):
+        if self._timeFrame is None or self._timeFrame['timeFrame'] != 'r':
+            return {}
+
         if self._is_streaming and self._stream_pause:
             self._stream_pause = False
         elif not self._is_streaming:
