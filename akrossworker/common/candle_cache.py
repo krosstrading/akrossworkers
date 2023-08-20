@@ -45,17 +45,17 @@ class CandleCache:
         day_candles = self.candles['d'].get_raw_candle()
         if len(day_candles) < 2:
             return 0
-        above_candle_count = 0
+        above_candle_count = 1
         current_low = int(day_candles[-1].price_low)
         current_price = int(day_candles[-1].price_close)
         high = int(day_candles[-1].price_high)
-        for candle in reversed(day_candles[:-1]):
+        for candle in reversed(day_candles[-100:-1]):
             if int(candle.price_low) < current_low:
                 break
 
             if int(candle.price_high) > high:
                 high = int(candle.price_high)
-            above_candle_count += 1
+            above_candle_count += 0.25
         current_to_high = (high / current_price - 1) * 100
         if above_candle_count == 0 or current_to_high < 5:
             return 0
