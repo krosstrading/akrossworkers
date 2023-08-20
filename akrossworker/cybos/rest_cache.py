@@ -141,12 +141,12 @@ class CybosRestCache(RpcBase):
     async def on_krx_pick(self, **kwargs):
         candidates = []
         for symbol, cache in self._symbols.items():
-            if symbol in self._symbol_info_cache and cache.get_coefficient_variation() > 0:
+            if symbol in self._symbol_info_cache and cache.get_drop_ratio() > 0:
                 candidates.append({
                     'symbol_info': self._symbol_info_cache[symbol],
-                    'cov': cache.get_coefficient_variation()
+                    'drop_ratio': cache.get_drop_ratio()
                 })
-        candidates.sort(key=lambda candidate: candidate['cov'], reverse=True)
+        candidates.sort(key=lambda candidate: candidate['drop_ratio'], reverse=True)
         candidates = candidates[:15]
         return [candidate['symbol_info'].to_network() for candidate in candidates]
 

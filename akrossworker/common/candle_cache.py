@@ -40,6 +40,25 @@ class CandleCache:
             if volatility_calc.is_under_mean(price):
                 return volatility_calc.get_coefficient_variation()
         return 0
+    
+    def get_drop_ratio(self) -> float:
+        day_candles = self.candles['d'].get_raw_candle()
+        if len(day_candles) < 2:
+            return 0
+        above_candle_count = 0
+        current_low = int(day_candles[-1].price_low)
+        current_price = int(day_candles[-1].price_close)
+        high = int(day_candles[-1].price_high)
+        for candle in reversed(day_candles[:-1]):
+            if int(candle.price_low) < current_low:
+                break
+
+            if int(candle.price_high) > high:
+                high = int(candle.price_high)
+            above_candle_count += 1
+        if above_candle_count == 0:
+            return 0
+        return (high / current_price - 1) * 100 / above_candle_count
 
     def get_data(self, interval: str):
         interval, interval_type = aktime.interval_dissect(interval)

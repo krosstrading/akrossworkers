@@ -18,7 +18,7 @@ from akrossworker.common.protocol import (
     PriceStreamProtocol,
     SymbolInfo
 )
-from akrossworker.common.votility_calc import VolatilityCalculator
+from akrossworker.common.volatility_calculator import VolatilityCalculator
 
 
 LOGGER = logging.getLogger(__name__)
