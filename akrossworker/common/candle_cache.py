@@ -46,20 +46,26 @@ class CandleCache:
         if len(day_candles) < 2:
             return 0
         above_candle_count = 1
+        highest = int(day_candles[-1].price_high)
         current_low = int(day_candles[-1].price_low)
-        current_price = int(day_candles[-1].price_close)
-        high = int(day_candles[-1].price_high)
-        for candle in reversed(day_candles[-100:-1]):
-            if int(candle.price_low) < current_low:
-                break
 
-            if int(candle.price_high) > high:
-                high = int(candle.price_high)
-            above_candle_count += 0.25
-        current_to_high = (high / current_price - 1) * 100
-        if above_candle_count == 0 or current_to_high < 5:
-            return 0
-        return current_to_high / above_candle_count
+        for candle in reversed(day_candles[-30:-1]):
+            if int(candle.price_high) > highest:
+                highest = int(candle.price_high)
+            
+            changes = (highest / current_low - 1) * 100
+            
+            if changes < 10 and int(candle.price_low) < current_low:
+                return 0
+            
+            above_candle_count += 1
+            if changes < 10:
+                continue
+            low_to_low = abs((int(candle.price_low) / current_low - 1) * 100)
+            if low_to_low < changes / 4:
+                return changes / above_candle_count
+        
+        return 0
 
     def get_data(self, interval: str):
         interval, interval_type = aktime.interval_dissect(interval)
