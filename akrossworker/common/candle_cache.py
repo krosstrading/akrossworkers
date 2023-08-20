@@ -56,9 +56,10 @@ class CandleCache:
             if int(candle.price_high) > high:
                 high = int(candle.price_high)
             above_candle_count += 1
-        if above_candle_count == 0:
+        current_to_high = (high / current_price - 1) * 100
+        if above_candle_count == 0 or current_to_high < 5:
             return 0
-        return (high / current_price - 1) * 100 / above_candle_count
+        return current_to_high / above_candle_count
 
     def get_data(self, interval: str):
         interval, interval_type = aktime.interval_dissect(interval)
