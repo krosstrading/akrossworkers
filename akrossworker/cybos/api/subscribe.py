@@ -46,7 +46,7 @@ class StockSubscribe(SubscribeBase):
             obj.GetHeaderValue(13),
             obj.GetHeaderValue(17),
             # return 49, 50(int), '1': buy, '2': sell
-            obj.GetHeaderValue(14) == ord('2'),
+            obj.GetHeaderValue(26) == ord('2'),
             (
                 TickTimeType.Normal if time_flag == ord('2')
                 else TickTimeType.ExtendedCloseBid
