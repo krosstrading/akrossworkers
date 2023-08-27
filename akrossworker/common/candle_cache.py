@@ -32,39 +32,16 @@ class CandleCache:
                 self.symbol_info, interval_type
             )
 
-    def get_coefficient_variation(self) -> float:
+    def get_triangle_score(self) -> float:
         min_unit_candle = self.candles['m']
-        price = min_unit_candle.get_last_price()
-        volatility_calc = min_unit_candle.get_volatility_calc()
-        if price > 0 and volatility_calc is not None:
-            if volatility_calc.is_under_mean(price):
-                return volatility_calc.get_coefficient_variation()
-        return 0
-    
-    def get_drop_ratio(self) -> float:
         day_candles = self.candles['d'].get_raw_candle()
         if len(day_candles) < 2:
             return 0
-        above_candle_count = 1
-        highest = int(day_candles[-1].price_high)
-        current_low = int(day_candles[-1].price_low)
-
-        for candle in reversed(day_candles[-30:-1]):
-            if int(candle.price_high) > highest:
-                highest = int(candle.price_high)
-            
-            changes = (highest / current_low - 1) * 100
-            
-            if changes < 10 and int(candle.price_low) < current_low:
-                return 0
-            
-            above_candle_count += 1
-            if changes < 10:
-                continue
-            low_to_low = abs((int(candle.price_low) / current_low - 1) * 100)
-            if low_to_low < changes / 4:
-                return changes / above_candle_count
         
+        volatility_calc = min_unit_candle.get_volatility_calc()
+        if volatility_calc is not None:
+            return volatility_calc.get_triangle_score(
+                (day_candles[-2].price_close), (day_candles[-1].price_close))
         return 0
 
     def get_data(self, interval: str):

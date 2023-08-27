@@ -3,8 +3,6 @@ import logging
 import sys
 from typing import Dict, List
 
-from akross.common import aktime
-
 from akross.connection.aio.quote_channel import QuoteChannel, Market
 from akross.common import enums, util
 from akrossworker.common.candle_cache import CandleCache
@@ -103,34 +101,22 @@ class CybosRestCache(RpcBase):
         return []
     
     async def on_krx_moment_rank(self, **kwargs):
-        candle_start_time = aktime.get_start_time(aktime.get_msec(), 'm', 'KRX')
-        today_start_time = aktime.get_start_time(aktime.get_msec(), 'd', 'KRX')
         candidates = []
 
         for symbol, cache in self._symbols.items():
             candles = cache.get_interval_type_data('m')
             day_candles = cache.get_interval_type_data('d')
-            if (
-                    len(day_candles) > 1 and
-                    len(candles) > 0 and
-                    candles[-1].start_time == candle_start_time and
-                    symbol in self._symbol_info_cache):
+            if (len(candles) > 0 and len(day_candles) > 1 and symbol in self._symbol_info_cache):
                 try:
-                    yclose = 0
-                    if today_start_time == day_candles[-1].start_time:
-                        yclose = int(day_candles[-2].price_close)
-                    else:
-                        yclose = int(day_candles[-1].price_close)
-                    tclose = int(candles[-1].price_close)
-                    amount = int(candles[-1].quote_asset_volume)
+                    current = (int(day_candles[-1].price_close) / int(day_candles[-2].price_close) - 1) * 100
+                    amount = sum([int(candle.quote_asset_volume) for candle in candles[-3:]])
                     market_cap = int(self._symbol_info_cache[symbol].market_cap)
                 except Exception:
                     continue
 
-                if market_cap <= 0 or yclose == 0:
+                if market_cap <= 0 or not (-5 <= current <= 5):
                     continue
-                # elif (tclose / yclose - 1) * 100 > 10:
-                #     continue
+
                 ratio = amount / market_cap
                 candidates.append({'symbol_info': self._symbol_info_cache[symbol],
                                    'ratio': ratio})
@@ -141,12 +127,14 @@ class CybosRestCache(RpcBase):
     async def on_krx_pick(self, **kwargs):
         candidates = []
         for symbol, cache in self._symbols.items():
-            if symbol in self._symbol_info_cache and cache.get_drop_ratio() > 0:
-                candidates.append({
-                    'symbol_info': self._symbol_info_cache[symbol],
-                    'drop_ratio': cache.get_drop_ratio()
-                })
-        candidates.sort(key=lambda candidate: candidate['drop_ratio'], reverse=True)
+            if symbol in self._symbol_info_cache:
+                score = cache.get_triangle_score()
+                if score > 0:
+                    candidates.append({
+                        'symbol_info': self._symbol_info_cache[symbol],
+                        'score': score
+                    })
+        candidates.sort(key=lambda candidate: candidate['score'], reverse=True)
         candidates = candidates[:15]
         return [candidate['symbol_info'].to_network() for candidate in candidates]
 
