@@ -8,11 +8,11 @@ from akross.common import enums, util
 from akrossworker.common.candle_cache import CandleCache
 from akrossworker.common.command import ApiCommand
 from akrossworker.common.db import DBEnum, Database
-from akrossworker.common.protocol import (
-    SymbolInfo
-)
+from akrossworker.common.protocol import SymbolInfo
+from akross.common import aktime
 from akross.rpc.base import RpcBase
 from akrossworker.common.args_constants import ApiArgKey as Args
+from akrossworker.common.args_constants import TickTimeType
 from akrossworker.cybos.candle_cache import CybosCandleCache
 from akross.common import env
 from datetime import datetime
@@ -93,28 +93,36 @@ class CybosRestCache(RpcBase):
 
     async def on_candle(self, **kwargs):
         util.check_required_parameters(kwargs, 'symbol', 'interval')
-        
         interval = kwargs['interval']
         symbol = kwargs['symbol'].lower()
         if symbol in self._symbols:
             return self._symbols[symbol].get_data(interval)
         return []
-    
+
+    def get_market_type(self) -> str:
+        now = aktime.get_msec()
+        hmsec = aktime.interval_type_to_msec('h')
+        mmsec = aktime.interval_type_to_msec('m')
+        day_start = aktime.get_start_time(now, 'd', 'KRX')
+        if now < day_start + aktime.interval_type_to_msec('h') * 9:
+            return TickTimeType.PreBid
+        elif now >= day_start + hmsec * 15 + mmsec * 20:
+            return TickTimeType.MarketCloseBid
+        return TickTimeType.Normal
+
     async def on_krx_moment_rank(self, **kwargs):
         candidates = []
-
         for symbol, cache in self._symbols.items():
             candles = cache.get_interval_type_data('m')
-            day_candles = cache.get_interval_type_data('d')
-            if (len(candles) > 0 and len(day_candles) > 1 and symbol in self._symbol_info_cache):
+            market_type = self.get_market_type()
+            if (len(candles) > 0 and symbol in self._symbol_info_cache):
                 try:
-                    current = (int(day_candles[-1].price_close) / int(day_candles[-2].price_close) - 1) * 100
-                    amount = sum([int(candle.quote_asset_volume) for candle in candles[-3:]])
+                    amount = cache.get_amount(market_type)
                     market_cap = int(self._symbol_info_cache[symbol].market_cap)
                 except Exception:
                     continue
 
-                if market_cap <= 0 or not (-5 <= current <= 5):
+                if market_cap <= 0:
                     continue
 
                 ratio = amount / market_cap

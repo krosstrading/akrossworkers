@@ -172,6 +172,8 @@ class UnitCandle:
             return
 
         s = PriceStreamProtocol.ParseNetwork(stream)
+        if self.volatility_calculator is not None:
+            self.volatility_calculator.update_amount(s)
         self.last_price = float(s.price)
         if not self._is_apply_extended() and s.time_type != TickTimeType.Normal:
             return

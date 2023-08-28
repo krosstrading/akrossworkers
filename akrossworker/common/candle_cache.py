@@ -37,11 +37,18 @@ class CandleCache:
         day_candles = self.candles['d'].get_raw_candle()
         if len(day_candles) < 2:
             return 0
-        
+
         volatility_calc = min_unit_candle.get_volatility_calc()
         if volatility_calc is not None:
             return volatility_calc.get_triangle_score(
                 (day_candles[-2].price_close), (day_candles[-1].price_close))
+        return 0
+
+    def get_amount(self, time_type: str) -> int:
+        min_unit_candle = self.candles['m']
+        volatility_calc = min_unit_candle.get_volatility_calc()
+        if volatility_calc is not None:
+            return volatility_calc.get_amount(time_type)
         return 0
 
     def get_data(self, interval: str):

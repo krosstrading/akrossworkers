@@ -1,6 +1,8 @@
+from typing import Dict
 from akrossworker.common.args_constants import TickTimeType
 from akrossworker.common.protocol import (
-    PriceCandleProtocol
+    PriceCandleProtocol,
+    PriceStreamProtocol
 )
 from akross.common import aktime
 
@@ -14,6 +16,7 @@ class VolatilityCalculator:
         self.low = 0
         self.low_index = 0
         self.start_price = 0
+        self.time_type_amount: Dict[str, int] = {}
 
     def add_complete_candle(self, candle: PriceCandleProtocol):
         if (candle.time_type != TickTimeType.Normal or candle.start_time < self.today_start):
@@ -29,7 +32,17 @@ class VolatilityCalculator:
             self.low = low
             self.low_index = self.count
         self.count += 1
-    
+
+    def get_amount(self, time_type: str) -> int:
+        if time_type in self.time_type_amount:
+            return self.time_type_amount[time_type]
+        return 0
+
+    def update_amount(self, stream: PriceStreamProtocol):
+        if stream.time_type not in self.time_type_amount:
+            self.time_type_amount[stream.time_type] = 0
+        self.time_type_amount[stream.time_type] += int(stream.volume) * int(stream.price)
+
     def get_triangle_score(
         self,
         yesterday_close: int,
