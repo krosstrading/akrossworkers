@@ -61,6 +61,15 @@ class DBQuoteQuery:
             }
         )
 
+    async def get_program_stream_data(self, symbol: str, start_time: int, end_time: int):
+        return await self.db.get_data(
+            'throwback',
+            'r_' + symbol.lower(),
+            {
+                'eventTime': {'$gte': start_time, '$lte': end_time}
+            }
+        )
+
 
 async def main():
     from datetime import datetime

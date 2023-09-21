@@ -18,7 +18,7 @@ async def main():
     await conn.market_discovery()
     await conn.wait_for_market('krx.spot')
     krx = conn.get_markets('krx.spot')
-    await conn.subscribe_stream(krx[0], ApiCommand.OrderbookStream, stream_arrived, target='a083790')
+    await conn.subscribe_stream(krx[0], ApiCommand.ProgramStream, stream_arrived, target='a086520')
     # await conn.subscribe_stream(krx[0], ApiCommand.OrderbookStream, stream_arrived, target='A024900')
     await asyncio.get_running_loop().create_future()
 

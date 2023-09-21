@@ -24,6 +24,7 @@ class DBEnum(str, Enum):
     KRX_HAS_PROFIT_DB = 'krx_has_profit'
     BINANCE_QUOTE_DB = 'binance_quote'
     FAVORITE_DB = 'favorite'
+    PLANNER_DB = 'planner'
 
 
 class Database:

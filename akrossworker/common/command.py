@@ -31,3 +31,11 @@ class AccountApiCommand:
     OpenOrder = 'openOrder'
     AssetEvent = 'assetEvent'
     OrderEvent = 'orderEvent'
+
+
+class PlannerApiCommand:
+    Planner = 'planner'
+    UpdatePlan = 'updatePlan'
+    PlanUpdated = 'planUpdated'
+    CancelPlan = 'cancelPlan'
+    CreatePlan = 'createPlan'

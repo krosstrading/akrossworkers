@@ -1,31 +1,20 @@
 from datetime import datetime
 import asyncio
-from typing import List
+
 from akrossworker.common.db import DBEnum
 from akross.common import aktime
-from akrossworker.common.args_constants import (
-    CandleLimitDays
-)
 from akrossworker.common.db_quote_query import DBQuoteQuery
-from akrossworker.common.protocol import PriceStreamProtocol
+from akrossworker.common.db import Database
 
 
-def get_db_start_search(interval_type) -> int:
-    return aktime.get_msec_before_day(
-        CandleLimitDays.get_limit_days(interval_type))
-
-
-async def get_rprice_on_day(db: DBQuoteQuery, symbol: str, ms: int) -> List[PriceStreamProtocol]:
+async def get_program_on_day(db: DBQuoteQuery, symbol: str, ms: int):
     search_ms = aktime.get_start_time(ms, 'd', 'KRX')
-    data = await db.get_price_stream_data(
+    data = await db.get_program_stream_data(
         symbol.lower(),
         search_ms,
         search_ms + aktime.interval_type_to_msec('d') - 1
     )
-    results: List[PriceStreamProtocol] = []
-    for row in data:
-        results.append(PriceStreamProtocol.ParseDatabase(symbol, row))
-    return results
+    return data
 
 
 async def read():
@@ -33,11 +22,12 @@ async def read():
     """
     check when extended time and normal time mixed
     """
-    data = await get_rprice_on_day(db, 'a005930', datetime(2023, 9, 1).timestamp() * 1000)
-    current_type = ''
-    for row in data:
-        data = row.to_database()
-        print(datetime.fromtimestamp(data['time'] / 1000), data)
+    data = await get_program_on_day(db, 'a274400', datetime(2023, 8, 16).timestamp() * 1000)
+    print('data len', len(data))
+    if len(data) > 0:
+        for row in data[-30:]:
+            print(datetime.fromtimestamp(row['eventTime'] / 1000), row)
+        
         # if data['timeType'] != current_type:
         #     print(datetime.fromtimestamp(data['time'] / 1000), 'type', data['timeType'])
         #     current_type = data['timeType']

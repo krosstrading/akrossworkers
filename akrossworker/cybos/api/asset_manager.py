@@ -220,6 +220,10 @@ class AssetManager:
                 self.callback(order_item.get_new_report().to_network())
                 break
             elif order_item.is_order_id_matched(event):  # 취소 경우
+                """
+                Cancel 의 경우, cancel order 시 바로 new order id 받아오기 때문에
+                cancel_order 통해 이미 신규 order id로 변경된 상태
+                """
                 found = True
                 break
         if not found:

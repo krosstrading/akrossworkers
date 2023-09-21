@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Dict, List, Optional, Union
 from akross.common import aktime
-
+import uuid
 from akrossworker.common.args_constants import TickTimeType
 
 
@@ -285,6 +285,303 @@ class SymbolInfo:
             info['listed'],
             info['tz'],
             info['version']
+        )
+
+
+class PlanItemPrecondition:
+    def __init__(self, link_id: str, when: str):
+        self.link_id = link_id
+        self.when = when
+
+    def __eq__(self, condition: PlanItemPrecondition):
+        if condition is None:
+            return False
+        elif self.link_id == condition.link_id and self.when == condition.when:
+            return True
+        return False
+
+    def as_dict(self):
+        return {
+            'linkId': self.link_id,
+            'when': self.when
+        }
+
+    @classmethod
+    def ParseNetwork(cls, data: dict):
+        return PlanItemPrecondition(data['linkId'], data['when'])
+
+
+class ActivationType:
+    OpenPrice = 'open'
+    MarketPrice = 'market'
+
+
+class PlanItemActivation:
+    def __init__(
+        self,
+        when: str,
+        condition_first: str,
+        condition_second: str,
+        direction: str
+    ):
+        self.when = when
+        self.condition_first = condition_first
+        self.condition_second = condition_second
+        self.direction = direction
+    
+    def as_dict(self):
+        new_dict = {
+            'when': self.when,
+            'condition': {
+                'first': self.condition_first,
+                'second': self.condition_second
+            },
+            'direction': self.direction
+        }
+        return new_dict
+
+    @classmethod
+    def ParseNetwork(cls, data: dict):
+        return PlanItemActivation(
+            data['when'],
+            data['condition']['first'],
+            data['condition']['second'],
+            data['direction']
+        )
+
+    def __eq__(self, obj: PlanItemActivation):
+        if (
+            self.when == obj.when and
+            self.condition_first == obj.condition_first and
+            self.condition_second == obj.condition_second and
+            self.direction == obj.direction
+        ):
+            return True
+        return False
+
+
+class PlanItemOrderItem:
+    def __init__(
+        self,
+        price: str,
+        weight: str,
+        order_price: str,
+        order_qty: str
+    ):
+        self.price = price
+        self.weight = weight
+        self.order_price = order_price
+        self.order_qty = order_qty
+
+    def __eq__(self, item: PlanItemOrderItem):
+        if (
+            self.price == item.price and
+            self.weight == item.weight and
+            self.order_price == item.order_price and
+            self.order_qty == item.order_qty
+        ):
+            return True
+        return False
+
+    def as_dict(self) -> dict:
+        return {
+            'price': self.price,
+            'weight': self.weight,
+            'orderPrice': self.order_price,
+            'orderQty': self.order_qty
+        }
+
+    @classmethod
+    def ParseNetwork(cls, data: dict):
+        order_price = data['orderPrice'] if 'orderPrice' in data else ''
+        order_qty = data['orderQty'] if 'orderQty' in data else ''
+        return PlanItemOrderItem(
+            data['price'],
+            data['weight'],
+            order_price,
+            order_qty
+        )
+
+
+class PlanItemOrder:
+    def __init__(
+        self,
+        order_items: List[PlanItemOrderItem],
+        strategy: List[str]
+    ):
+        self.items = order_items
+        self.strategy = strategy
+
+    def as_dict(self) -> dict:
+        new_dict = {'items': [], 'strategy': self.strategy}
+        for item in self.items:
+            new_dict['items'].append(item.as_dict())
+        return new_dict
+
+    def __eq__(self, obj: PlanItemOrder):
+        if (
+            len(self.items) != len(obj.items) or
+            len(self.strategy) != len(obj.strategy)
+        ):
+            return False
+        for strategy in obj.strategy:
+            if strategy not in self.strategy:
+                return False
+        for item in obj.items:
+            found = False
+            for this_item in self.items:
+                if this_item == item:
+                    found = True
+            if not found:
+                return False
+        return True
+
+    @classmethod
+    def ParseNetwork(cls, data: dict):
+        items = []
+        for item in data['items']:
+            items.append(PlanItemOrderItem.ParseNetwork(item))
+        return PlanItemOrder(items, data['strategy'])
+
+
+class PlanItemLog:
+    def __init__(
+        self,
+        event_time: int,
+        event_type: str,
+        event_msg: str
+    ):
+        self.event_time = event_time
+        self.event_type = event_type
+        self.event_msg = event_msg
+
+    def as_dict(self):
+        return {
+            'time': self.event_time,
+            'eventType': self.event_type,
+            'msg': self.event_msg
+        }
+
+    @classmethod
+    def ParseNetwork(cls, data: dict):
+        return PlanItemLog(data['time'], data['eventType'], data['msg'])
+
+
+class PlanItemStatus:
+    Wait = 'wait'
+    Watch = 'watch'
+    Progress = 'progress'
+    Cancel = 'cancel'
+    Finish = 'finish'
+
+    IntWait = 1
+    IntWatch = 2
+    IntProgress = 3
+    IntCancel = 4
+    IntFinish = 5
+    IntUnknown = 0
+
+    @staticmethod
+    def ToInteger(status: str):
+        if status == PlanItemStatus.Wait:
+            return PlanItemStatus.IntWait
+        elif status == PlanItemStatus.Watch:
+            return PlanItemStatus.IntWatch
+        elif status == PlanItemStatus.Progress:
+            return PlanItemStatus.IntProgress
+        elif status == PlanItemStatus.Cancel:
+            return PlanItemStatus.IntCancel
+        elif status == PlanItemStatus.Finish:
+            return PlanItemStatus.IntFinish
+        return PlanItemStatus.IntUnknown
+
+
+class PlanMutableColumn:
+    Activation = 'activation'
+    StopPrice = 'stopPrice'
+    Amount = 'amount'
+    StartTime = 'startTime'
+    EndTime = 'endTime'
+    Buy = 'buy'
+    Sell = 'sell'
+    Logs = 'logs'
+    Status = 'status'
+    Precondition = 'precondition'
+
+
+class PlanItem:
+    def __init__(
+        self,
+        plan_id: str,
+        symbol_id: str,
+        activation: PlanItemActivation,
+        amount: str,
+        start_time: int,
+        end_time: int,
+        buy: PlanItemOrder,
+        sell: PlanItemOrder,
+        stop_price: str,
+        status: str,
+        precondition: PlanItemPrecondition,
+        logs: List[PlanItemLog]
+    ):
+        self.planId = plan_id
+        self.symbolId = symbol_id
+        self.activation = activation
+        self.precondition = precondition
+        self.status = status
+        self.startTime = start_time
+        self.endTime = end_time
+        self.amount = amount
+        self.buy = buy
+        self.sell = sell
+        self.stopPrice = stop_price
+        self.logs = logs
+
+    def to_network(self):
+        return {
+            'planId': self.planId,
+            'symbolId': self.symbolId,
+            'activation': self.activation.as_dict(),
+            'startTime': self.startTime,
+            'endTime': self.endTime,
+            'stopPrice': self.stopPrice,
+            'amount': self.amount,
+            'buy': self.buy.as_dict(),
+            'sell': self.sell.as_dict(),
+            'status': self.status,
+            'logs': [log.as_dict() for log in self.logs],
+            'precondition': self.precondition.as_dict()
+        }
+
+    @classmethod
+    def ParseNetwork(cls, data: dict, is_new=False):
+        plan_id = ''
+        if 'planId' not in data:
+            if is_new:
+                plan_id = str(uuid.uuid4())
+            else:
+                return None
+        else:
+            plan_id = data['planId']
+
+        logs = []
+        for log in data['logs']:
+            logs.append(PlanItemLog.ParseNetwork(log))
+
+        return PlanItem(
+            plan_id,
+            data['symbolId'],
+            PlanItemActivation.ParseNetwork(data['activation']),
+            data['amount'],
+            data['startTime'],
+            data['endTime'],
+            PlanItemOrder.ParseNetwork(data['buy']),
+            PlanItemOrder.ParseNetwork(data['sell']),
+            data['stopPrice'],
+            data['status'],
+            PlanItemPrecondition.ParseNetwork(data['precondition']),
+            logs
         )
 
 
